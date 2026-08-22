@@ -1062,26 +1062,26 @@
           download the backup file, then import it here.
         </p>
 
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;">
           <button type="button" class="btn btn-primary" id="exportMigrationCodeBtn">Copy old-site export code</button>
-          <label class="btn" style="cursor:pointer;">
-            Import old backup
+          <label class="btn btn-ghost" style="cursor:pointer;">
+            📥 Import backup JSON file
             <input id="migrationFileInput" type="file" accept=".json,application/json" hidden>
           </label>
         </div>
 
-        <div id="migrationStatus" class="form-msg" style="min-height:18px;"></div>
+        <div id="migrationStatus" class="form-msg" style="min-height:18px;font-weight:600;"></div>
 
         <div class="panel" style="margin-top:18px;">
-          <h2>Old-site code</h2>
+          <h2>Old-site code (Run in Old Site Console)</h2>
           <textarea id="oldSiteCode" readonly
-            style="width:100%;min-height:190px;resize:vertical;font-family:monospace;font-size:12px;direction:ltr;"></textarea>
+            style="width:100%;min-height:190px;resize:vertical;font-family:var(--font-mono);font-size:12px;direction:ltr;background:var(--petcy-paper);border:1px solid var(--line);padding:10px;border-radius:8px;"></textarea>
         </div>
 
         <div class="panel" style="margin-top:18px;">
-          <h2>Alternative: paste backup text</h2>
+          <h2>Alternative: paste backup JSON text directly</h2>
           <textarea id="manualMigrationText" placeholder="Paste the contents of the JSON backup file here…"
-            style="width:100%;min-height:150px;resize:vertical;font-family:monospace;font-size:12px;direction:ltr;"></textarea>
+            style="width:100%;min-height:150px;resize:vertical;font-family:var(--font-mono);font-size:12px;direction:ltr;background:#FFF;border:1px solid var(--line);padding:10px;border-radius:8px;"></textarea>
           <button type="button" class="btn btn-primary" id="importPastedBackup" style="margin-top:10px;">Import pasted backup</button>
         </div>
       </div>
@@ -3320,6 +3320,108 @@
       playSound('delete');
       alert('✅ تم مسح جميع البيانات وتصفير النظام بنجاح.');
       location.reload();
+    });
+  }
+
+  /* ---------------- MIGRATION SYSTEM LOGIC ---------------- */
+  const OLD_SITE_EXPORT_SNIPPET = `(() => {
+  const keys = ['inventory','sales','purchases','customers','expenses','suppliers','returnsLog','customerPayments','supplierPayments','stockMovements','inventoryAudits','auditLog','dailyClosures','dailyOrders','bundles','writeOffs','coupons','store-name','currency-symbol'];
+  const dump = { app: 'Store Ledger', version: 3, exportedAt: new Date().toISOString(), data: {} };
+  keys.forEach(k => {
+    const val = localStorage.getItem(k);
+    if (val !== null) {
+      try { dump.data[k] = JSON.parse(val); } catch(e) { dump.data[k] = val; }
+    }
+  });
+  const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'store-ledger-migration-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  console.log('✅ Backup exported successfully!');
+})();`;
+
+  if($('oldSiteCode')){
+    $('oldSiteCode').value = OLD_SITE_EXPORT_SNIPPET;
+  }
+
+  if($('exportMigrationCodeBtn')){
+    $('exportMigrationCodeBtn').addEventListener('click', ()=>{
+      navigator.clipboard.writeText(OLD_SITE_EXPORT_SNIPPET).then(()=>{
+        $('migrationStatus').textContent = '✅ Copied to clipboard! Run it in your old site Console (F12 -> Console).';
+        playSound('success');
+      }).catch(()=>{
+        $('migrationStatus').textContent = '⚠️ Please manually copy the code from the box below.';
+      });
+    });
+  }
+
+  function processImportedPayload(parsedJson){
+    try {
+      let dataObj = null;
+      if (parsedJson.data && typeof parsedJson.data === 'object') {
+        dataObj = parsedJson.data;
+      } else if (typeof parsedJson === 'object') {
+        dataObj = parsedJson;
+      }
+
+      if (!dataObj) {
+        throw new Error('Invalid backup structure.');
+      }
+
+      let importedKeysCount = 0;
+      BACKUP_DATA_KEYS.forEach(k => {
+        if (dataObj[k] !== undefined && dataObj[k] !== null) {
+          const valToStore = typeof dataObj[k] === 'string' ? dataObj[k] : JSON.stringify(dataObj[k]);
+          localStorage.setItem(k, valToStore);
+          importedKeysCount++;
+        }
+      });
+
+      loadAll();
+      renderAll();
+      playSound('success');
+      $('migrationStatus').textContent = `✅ Successfully imported and restored ${importedKeysCount} data tables!`;
+      setTimeout(()=>{ location.reload(); }, 1200);
+    } catch(err) {
+      alert('Error parsing backup: ' + err.message);
+      $('migrationStatus').textContent = '❌ Failed to import backup.';
+    }
+  }
+
+  // File Upload Migration Listener
+  if($('migrationFileInput')){
+    $('migrationFileInput').addEventListener('change', (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const json = JSON.parse(evt.target.result);
+          processImportedPayload(json);
+        } catch(err) {
+          alert('Could not parse the selected JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  // Manual Pasted Text Migration Listener
+  if($('importPastedBackup')){
+    $('importPastedBackup').addEventListener('click', ()=>{
+      const text = $('manualMigrationText').value.trim();
+      if(!text) return alert('Please paste the JSON backup text first.');
+
+      try {
+        const json = JSON.parse(text);
+        processImportedPayload(json);
+      } catch(err) {
+        alert('Invalid JSON text format. Please check the pasted text.');
+      }
     });
   }
 
