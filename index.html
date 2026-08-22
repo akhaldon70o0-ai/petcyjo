@@ -1,0 +1,3347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Store Ledger</title>
+<!-- HTML5 QR Code & Barcode Scanner Library -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root{
+    --petcy-teal:#12B8B1;
+    --petcy-teal-dark:#087F7A;
+    --petcy-teal-soft:#E8FBF9;
+    --petcy-mint:#F3FFFE;
+    --petcy-black:#171A1A;
+    --petcy-gray:#647271;
+    --petcy-line:#E1ECEB;
+    --petcy-red:#D85B55;
+    --petcy-paper:#F7FBFA;
+    --forest:var(--petcy-teal-dark);
+    --forest-dark:var(--petcy-black);
+    --paper:var(--petcy-paper);
+    --ink:var(--petcy-black);
+    --gold:var(--petcy-teal);
+    --brick:var(--petcy-red);
+    --sage:var(--petcy-teal-dark);
+    --line:var(--petcy-line);
+    --font-display: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: "SF Mono", "IBM Plex Mono", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:var(--font-body);
+    background:linear-gradient(180deg,#FAFFFE 0%,var(--petcy-paper) 100%);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{display:flex;min-height:100vh;position:relative;}
+
+  /* ---------- Mobile Menu Toggle Button ---------- */
+  .mobile-menu-btn{
+    display:none;
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    z-index:99;
+    background:var(--petcy-teal);
+    color:#FFF;
+    border:none;
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    box-shadow:0 8px 24px rgba(18,184,177,0.4);
+    font-size:22px;
+    cursor:pointer;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:240px;
+    flex-shrink:0;
+    background:linear-gradient(180deg,#0E8F89 0%,#0A736E 100%);
+    color:#FFFFFF;
+    display:flex;
+    flex-direction:column;
+    padding:22px 0 16px;
+    max-height:100vh;
+    overflow-y:auto;
+    position:sticky;
+    top:0;
+    z-index:40;
+    transition:transform .3s ease;
+  }
+  .brand{
+    padding:0 20px 18px;
+    border-bottom:1px solid rgba(237,234,224,0.15);
+    margin-bottom:14px;
+  }
+  .brand-label{
+    font-size:10px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    opacity:0.55;
+    margin-bottom:6px;
+  }
+  .brand input{
+    background:transparent;
+    border:none;
+    border-bottom:1px solid rgba(237,234,224,0.25);
+    color:#F6F4EC;
+    font-family:var(--font-display);
+    font-size:19px;
+    padding:2px 0 6px;
+    width:100%;
+  }
+  .brand input:focus{outline:none;border-bottom-color:var(--gold);}
+  .nav{display:flex;flex-direction:column;gap:2px;padding:0 12px;}
+  .nav-tab{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:11px 14px;
+    border-radius:12px;
+    color:rgba(255,255,255,.88);
+    text-decoration:none;
+    font-size:14px;
+    cursor:pointer;
+    border-left:3px solid transparent;
+    transition:background .15s ease, transform .15s ease;
+    user-select:none;
+  }
+  .nav-tab:hover{background:rgba(255,255,255,.10);transform:translateX(2px);}
+  .nav-tab.active{
+    background:linear-gradient(180deg,#FAFFFE 0%,var(--petcy-paper) 100%);
+    color:var(--forest-dark);
+    border-left-color:#FFFFFF;
+    font-weight:600;
+  }
+  .nav-tab.active .ico{opacity:1;}
+  .sidebar-foot{
+    margin-top:auto;
+    padding:14px 20px 0;
+    font-size:11px;
+    color:rgba(237,234,224,0.45);
+    border-top:1px solid rgba(237,234,224,0.15);
+  }
+  .sidebar-foot label{display:block;margin-bottom:5px;}
+  .sidebar-foot input{
+    width:56px;background:rgba(255,255,255,.10);border:1px solid rgba(237,234,224,0.2);
+    color:#EDEAE0;border-radius:4px;padding:4px 6px;font-family:var(--font-mono);font-size:12px;
+  }
+
+  /* Sound Toggle Button */
+  .sound-btn{
+    background:rgba(255,255,255,0.12);
+    border:1px solid rgba(255,255,255,0.25);
+    color:#FFF;
+    border-radius:8px;
+    padding:6px 10px;
+    font-size:11.5px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    margin-top:10px;
+    width:100%;
+    transition:background .2s;
+  }
+  .sound-btn:hover{background:rgba(255,255,255,0.22);}
+
+  /* ---------- Main ---------- */
+  .content{flex:1;min-width:0;padding:26px 34px 60px;}
+  .topbar{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid var(--line);
+  }
+  .topbar h1{font-family:var(--font-display);font-weight:800;font-size:28px;margin:0;letter-spacing:-.02em;color:var(--petcy-black);}
+  .topbar .sub{font-size:12.5px;color:var(--petcy-gray);margin-top:5px;}
+  .till{text-align:right;font-family:var(--font-mono);}
+  .till .till-label{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#5b5f52;}
+  .till .till-value{font-size:22px;font-weight:600;}
+  .till-value.pos{color:var(--sage);}
+  .till-value.neg{color:var(--brick);}
+
+  .view{display:none;}
+  .view.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
+
+  /* Cards */
+  .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:26px;}
+  .card{
+    background:#FFFFFF;border:1px solid var(--petcy-line);box-shadow:0 6px 22px rgba(16,118,112,.05);border-radius:14px;
+    padding:16px 18px;
+  }
+  .card .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:#6b6f60;margin-bottom:8px;}
+  .card .v{font-family:var(--font-mono);font-size:22px;font-weight:600;}
+  .card .v.alert{color:var(--brick);}
+  .card .v.good{color:var(--sage);}
+
+  .panel{background:#FFFFFF;border:1px solid var(--petcy-line);box-shadow:0 6px 22px rgba(16,118,112,.05);border-radius:14px;margin-bottom:24px;}
+  .panel-head-row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .panel-search{font-family:var(--font-body);font-size:13px;font-weight:400;border:1px solid var(--petcy-line);box-shadow:0 6px 22px rgba(16,118,112,.05);border-radius:20px;padding:7px 14px;background:#FFFFFF;width:230px;max-width:48%;}
+  .panel-search:focus{outline:none;border-color:var(--gold);background:#FFFFFF;}
+  
+  .sale-totals{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);}
+  .sale-total-box{background:#FFFFFF;border:1px solid var(--petcy-line);box-shadow:0 6px 22px rgba(16,118,112,.05);border-radius:12px;padding:10px 12px;}
+  .sale-total-box .label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#6b6f60;margin-bottom:4px;}
+  .sale-total-box .value{font-family:var(--font-mono);font-size:16px;font-weight:600;}
+  .customer-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0;}
+  .customer-summary .card{margin:0;}
+  .debt-pos{color:var(--brick);}
+  .debt-zero{color:var(--sage);}
+  @media(max-width:900px){
+    .sale-totals,.customer-summary{grid-template-columns:repeat(2,1fr);}
+  }
+
+  .sale-card-profit{font-family:var(--font-mono);font-size:12.5px;font-weight:600;color:#6b6f60;margin-right:2px;}
+  .sale-card-profit.profit-pos{color:var(--sage);}
+  .sale-card-profit.profit-neg{color:var(--brick);}
+
+  .panel h2{
+    font-family:var(--font-display);font-weight:400;font-size:17px;margin:0;
+    padding:14px 18px;border-bottom:1px solid var(--line);
+  }
+  .recent-row{
+    display:flex;justify-content:space-between;padding:10px 18px;
+    border-bottom:1px solid var(--line);font-size:13.5px;
+  }
+  .recent-row:last-child{border-bottom:none;}
+  .tag{
+    font-size:10px;text-transform:uppercase;letter-spacing:.06em;
+    padding:2px 7px;border-radius:20px;font-weight:600;margin-right:8px;
+  }
+  .tag.sale{background:rgba(94,133,103,0.15);color:var(--sage);}
+  .tag.purchase{background:rgba(192,138,40,0.18);color:var(--gold);}
+  .tag.damaged{background:rgba(216,91,85,0.15);color:var(--brick);}
+  .tag.sample{background:rgba(18,184,177,0.15);color:var(--forest);}
+  .recent-amt{font-family:var(--font-mono);}
+
+  /* Badges */
+  .badge-growth-pos{background:#EAF8EE;color:#2E7D46;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:700;}
+  .badge-growth-neg{background:#FFEBEA;color:#D85B55;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:700;}
+
+  /* Forms */
+  .form-panel{background:#FFFFFF;border:1px solid var(--petcy-line);box-shadow:0 6px 22px rgba(16,118,112,.05);border-radius:14px;padding:18px;margin-bottom:20px;}
+  .form-panel h2{font-family:var(--font-display);font-weight:400;font-size:17px;margin:0 0 14px;}
+  .form-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;align-items:end;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b6f60;}
+  .field input, .field select{
+    border:1px solid var(--petcy-line);box-shadow:0 6px 22px rgba(16,118,112,.05);border-radius:10px;padding:8px 9px;font-size:13.5px;
+    font-family:var(--font-body);background:#FFFFFF;
+  }
+  .field input:focus, .field select:focus{outline:none;border-color:var(--gold);background:#FFFFFF;}
+  .field.span2{grid-column:span 2;}
+  .field.span3{grid-column:span 3;}
+  .btn{
+    border:none;border-radius:10px;padding:9px 16px;font-size:13.5px;font-weight:600;
+    cursor:pointer;transition:opacity .15s ease;
+  }
+  .btn:hover{opacity:0.88;}
+  .btn-primary{background:var(--petcy-teal);color:#FFFFFF;box-shadow:0 6px 16px rgba(18,184,177,.22);}
+  .btn-ghost{background:transparent;color:var(--forest);border:1px solid var(--petcy-line);box-shadow:0 6px 22px rgba(16,118,112,.05);}
+  .btn-danger-text{background:none;border:none;color:var(--brick);cursor:pointer;font-size:12px;padding:0;}
+  .btn-edit-text{background:none;border:none;color:var(--forest);cursor:pointer;font-size:12px;padding:0;margin-right:10px;}
+  .form-msg{font-size:12px;color:var(--sage);margin-left:4px;}
+
+  /* Table */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  thead th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;
+    color:#6b6f60;padding:10px 18px;border-bottom:1px solid var(--line);font-weight:600;
+  }
+  tbody td{padding:10px 18px;border-bottom:1px solid var(--line);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#FFFFFF;}
+  .num{font-family:var(--font-mono);}
+  .profit-pos{color:var(--sage);}
+  .profit-neg{color:var(--brick);}
+  .row-low td{background:rgba(168,58,50,0.06);}
+  .pill-low{
+    display:inline-block;margin-left:8px;font-size:9.5px;text-transform:uppercase;
+    background:rgba(168,58,50,0.15);color:var(--brick);padding:1px 6px;border-radius:20px;font-weight:700;
+  }
+  .empty-state{padding:40px 18px;text-align:center;color:#8a8d7e;font-size:13.5px;}
+
+  /* Cart & Builder */
+  #cartWrap table, #bundleBuilderWrap table{background:#FFFFFF;border:1px solid var(--petcy-line);box-shadow:0 6px 22px rgba(16,118,112,.05);border-radius:12px;overflow:hidden;}
+  #cartWrap th, #bundleBuilderWrap th{padding:8px 14px;}
+  #cartWrap td, #bundleBuilderWrap td{padding:6px 14px;}
+  .cart-input{
+    width:100%;max-width:90px;border:1px solid var(--petcy-line);box-shadow:0 6px 22px rgba(16,118,112,.05);border-radius:4px;
+    padding:5px 7px;font-family:var(--font-mono);font-size:13px;background:#FFFFFF;
+  }
+  .cart-input:focus{outline:none;border-color:var(--gold);}
+
+  /* Sales log */
+  .sale-card{border-bottom:1px solid var(--line);}
+  .sale-card:last-child{border-bottom:none;}
+  .sale-card-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:11px 18px;background:#FFFFFF;flex-wrap:wrap;gap:8px;
+  }
+  .sale-card-meta{display:flex;gap:12px;align-items:baseline;font-size:13.5px;}
+  .sale-card-date{font-weight:600;}
+  .sale-card-cust{color:#6b6f60;}
+  .sale-card-actions{display:flex;align-items:center;gap:14px;}
+  .sale-card-total{font-family:var(--font-mono);font-weight:600;font-size:14px;}
+  table.sale-items{width:100%;border-collapse:collapse;font-size:13px;}
+  table.sale-items th{
+    padding:6px 18px;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;
+    color:#8a8d7e;text-align:left;border-bottom:1px solid var(--line);font-weight:600;
+  }
+  table.sale-items td{padding:6px 18px;border-bottom:none;}
+
+  /* Barcode Scanner Box */
+  #scannerContainer{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999;
+    align-items:center;justify-content:center;padding:20px;
+  }
+  .scanner-modal{
+    background:#FFF;border-radius:16px;padding:20px;max-width:480px;width:100%;text-align:center;
+  }
+
+  .loading-screen{
+    position:fixed;inset:0;background:linear-gradient(180deg,#FAFFFE 0%,var(--petcy-paper) 100%);display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);color:#6b6f60;font-size:13px;letter-spacing:.05em;z-index:50;
+  }
+
+  @media (max-width: 900px){
+    .mobile-menu-btn{display:flex;}
+    .sidebar{
+      position:fixed;
+      top:0;left:0;bottom:0;
+      transform:translateX(-100%);
+      box-shadow:4px 0 20px rgba(0,0,0,0.2);
+    }
+    .sidebar.open{
+      transform:translateX(0);
+    }
+    .form-grid{grid-template-columns:repeat(2,1fr);}
+    .field.span2, .field.span3{grid-column:span 2;}
+    .cards{grid-template-columns:repeat(3,1fr);}
+    .content{padding:18px;}
+  }
+  @media (max-width: 640px){
+    .cards{grid-template-columns:1fr 1fr;}
+    .form-grid{grid-template-columns:1fr 1fr;}
+  }
+
+  .brand-petcy{font-size:30px;font-weight:900;line-height:1;color:#FFFFFF;letter-spacing:-.04em;}
+  .brand-petcy::before{content:'🐾';font-size:20px;margin-right:8px;vertical-align:3px;}
+  .brand-tagline{font-size:10px;letter-spacing:.04em;color:rgba(255,255,255,.78);margin:5px 0 12px;}
+  .sale-card-head{background:var(--petcy-mint);}
+  .recent-row:hover,.panel tbody tr:hover{background:var(--petcy-mint);}
+  .panel-search:focus,.cart-input:focus,.field input:focus,.field select:focus{border-color:var(--petcy-teal);box-shadow:0 0 0 3px rgba(18,184,177,.10);}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">Opening the ledger…</div>
+
+<!-- MOBILE FLOATING MENU BUTTON -->
+<button type="button" class="mobile-menu-btn" id="mobileMenuToggle" aria-label="Toggle Menu">☰</button>
+
+<!-- BARCODE CAMERA SCANNER MODAL -->
+<div id="scannerContainer">
+  <div class="scanner-modal">
+    <h3 style="margin:0 0 12px;">📷 Scan Product Barcode</h3>
+    <div id="barcodeReader" style="width:100%;min-height:260px;background:#000;border-radius:12px;overflow:hidden;"></div>
+    <div style="margin-top:14px;">
+      <button class="btn btn-ghost" type="button" id="closeScannerBtn">Cancel Scan</button>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none;">
+  <aside class="sidebar" id="appSidebar">
+    <div class="brand">
+      <div class="brand-label">Store</div>
+      <div class="brand-petcy">Petcy</div>
+      <div class="brand-tagline">Animal Care &amp; Accessories</div>
+      <input id="storeNameInput" type="text" placeholder="Your Store Name" />
+    </div>
+    <nav class="nav" id="navTabs">
+      <div class="nav-tab active" data-view="dashboard"><span class="ico">◆</span>Dashboard</div>
+      <div class="nav-tab" data-view="sales"><span class="ico">↗</span>Sales</div>
+      <div class="nav-tab" data-view="purchases"><span class="ico">↙</span>Purchases</div>
+      <div class="nav-tab" data-view="inventory"><span class="ico">▤</span>Existing Goods</div>
+      <div class="nav-tab" data-view="bundles"><span class="ico">🎁</span>Bundles</div>
+      <div class="nav-tab" data-view="coupons"><span class="ico">🎟</span>Promo Codes</div>
+      <div class="nav-tab" data-view="damaged-samples"><span class="ico">⚠</span>Damaged &amp; Samples</div>
+      <div class="nav-tab" data-view="customers"><span class="ico">☺</span>Customers</div>
+      <div class="nav-tab" data-view="stock-movements"><span class="ico">↕</span>Stock Moves</div>
+      <div class="nav-tab" data-view="stocktake"><span class="ico">▧</span>Stocktake</div>
+      <div class="nav-tab" data-view="daily-close"><span class="ico">◷</span>Daily Close</div>
+      <div class="nav-tab" data-view="daily-orders"><span class="ico">▤</span>Daily Orders</div>
+      <div class="nav-tab" data-view="delivery"><span class="ico">⇢</span>Delivery</div>
+      <div class="nav-tab" data-view="suppliers"><span class="ico">▣</span>Suppliers</div>
+      <div class="nav-tab" data-view="returns"><span class="ico">↩</span>Returns</div>
+      <div class="nav-tab" data-view="expenses"><span class="ico">−</span>Expenses</div>
+      <div class="nav-tab" data-view="reports"><span class="ico">▥</span>Reports &amp; Matrix</div>
+      <div class="nav-tab" data-view="backup"><span class="ico">⇩</span>Backup</div>
+      <div class="nav-tab" data-view="migration"><span class="ico">⇄</span>Migration</div>
+    </nav>
+    <div class="sidebar-foot">
+      <label for="currencyInput">Currency symbol</label>
+      <input id="currencyInput" type="text" maxlength="4" value="$" />
+      <button type="button" class="sound-btn" id="soundToggleBtn">🔊 Sound: ON</button>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle">Dashboard</h1>
+        <div class="sub" id="pageSub">Overview of your store, at a glance</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div id="petcyStatusPill" style="background:var(--petcy-teal-soft);color:var(--petcy-teal-dark);padding:8px 12px;border-radius:999px;font-size:11px;font-weight:700;">PETCY</div>
+        <div class="till">
+          <div class="till-label">Net position (all time)</div>
+          <div class="till-value" id="tillValue">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <section class="view active" id="view-dashboard">
+      <div class="cards">
+        <div class="card"><div class="k">Sales this month</div><div class="v" id="cardSalesMonth">—</div></div>
+        <div class="card"><div class="k">Purchases this month</div><div class="v" id="cardPurchMonth">—</div></div>
+        <div class="card"><div class="k">Inventory value</div><div class="v" id="cardInvValue">—</div></div>
+        <div class="card"><div class="k">Low stock items</div><div class="v" id="cardLowStock">—</div></div>
+        <div class="card"><div class="k">Customers</div><div class="v" id="cardCustomers">—</div></div>
+        <div class="card"><div class="k">Orders today</div><div class="v" id="cardDailyOrders">—</div></div>
+        <div class="card"><div class="k">Receivables</div><div class="v" id="cardReceivables">—</div></div>
+        <div class="card"><div class="k">Payables</div><div class="v" id="cardPayables">—</div></div>
+        <div class="card"><div class="k">Expenses this month</div><div class="v" id="cardExpensesMonth">—</div></div>
+        <div class="card"><div class="k">Net profit this month</div><div class="v good" id="cardNetProfitMonth">—</div></div>
+      </div>
+      <div class="panel"><h2>Alerts</h2><div id="dashboardAlertsWrap" class="empty-state"></div></div>
+      <div class="panel" id="dashboardInsights"><h2>Top products</h2><div id="topProductsWrap" class="empty-state"></div></div>
+      <div class="panel">
+        <h2>Recent activity</h2>
+        <div id="recentList"></div>
+      </div>
+    </section>
+
+    <!-- SALES WITH BARCODE & PROMO CODES -->
+    <section class="view" id="view-sales">
+      <div class="form-panel">
+        <h2 id="saleFormTitle">Record a sale</h2>
+        <div class="form-grid">
+          <div class="field"><label>Date</label><input type="date" id="saleDate"></div>
+          <div class="field span2"><label>Customer (optional)</label><input type="text" id="saleCustomer" list="customerList" placeholder="Walk-in"></div>
+          <div class="field"><label>Paid amount</label><input type="number" id="salePaidAmount" min="0" step="any" value="0"></div>
+          <div class="field"><label>Payment method</label>
+            <select id="salePaymentMethod">
+              <option value="Cash">Cash</option><option value="Card">Card</option><option value="Transfer">Transfer</option><option value="Credit">Credit</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- FAST BARCODE & PROMO ROW -->
+        <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;margin-top:16px;">
+          <div style="background:var(--petcy-mint);border:1px solid var(--petcy-line);border-radius:12px;padding:10px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <div style="font-weight:700;font-size:12.5px;color:var(--petcy-teal-dark);">⚡ Fast Barcode:</div>
+            <input type="text" id="barcodeQuickInput" placeholder="Scan barcode..." style="flex:1;min-width:130px;border:1px solid var(--petcy-line);padding:6px 10px;border-radius:8px;font-family:var(--font-mono);font-size:13px;">
+            <button type="button" class="btn btn-primary" id="openBarcodeCamBtn" style="padding:6px 12px;font-size:12.5px;">📷 Cam</button>
+          </div>
+          <div style="background:var(--petcy-paper);border:1px solid var(--petcy-line);border-radius:12px;padding:10px 14px;display:flex;gap:8px;align-items:center;">
+            <div style="font-weight:700;font-size:12.5px;color:var(--forest-dark);">🎟 Promo Code:</div>
+            <input type="text" id="salePromoCodeInput" placeholder="Enter coupon" style="flex:1;text-transform:uppercase;border:1px solid var(--petcy-line);padding:6px 10px;border-radius:8px;font-family:var(--font-mono);font-size:13px;">
+            <button type="button" class="btn btn-ghost" id="applyPromoCodeBtn" style="padding:6px 12px;font-size:12.5px;">Apply</button>
+          </div>
+        </div>
+
+        <div class="form-grid" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line);">
+          <div class="field span2">
+            <label>Item or Bundle</label>
+            <input type="text" id="saleItemInput" list="itemList" placeholder="Pick goods or bundle">
+          </div>
+          <div class="field"><label>Quantity</label><input type="number" id="saleQtyInput" min="1" step="1" value="1"></div>
+          <div class="field"><label>Unit price</label><input type="number" id="salePriceInput" min="0" step="any"></div>
+          <div class="field"><label>Cost price</label><input type="number" id="saleCostInput" min="0" step="any"></div>
+          
+          <div class="field">
+            <label>Invoice discount</label>
+            <select id="saleDiscountType"><option value="none">None</option><option value="percent">%</option><option value="fixed">Fixed</option></select>
+          </div>
+          <div class="field">
+            <label>Discount value</label>
+            <input type="number" id="saleDiscountValue" min="0" step="any" value="0">
+          </div>
+          <div class="field"><button type="button" class="btn btn-ghost" id="addCartItemBtn">Add item to sale</button></div>
+        </div>
+
+        <div id="cartWrap" style="margin-top:14px;"></div>
+
+        <div class="sale-totals">
+          <div class="sale-total-box"><div class="label">Subtotal</div><div class="value" id="saleSubtotal">—</div></div>
+          <div class="sale-total-box"><div class="label">Discount</div><div class="value" id="saleDiscountAmount">—</div></div>
+          <div class="sale-total-box"><div class="label">Final total</div><div class="value" id="cartTotal">—</div></div>
+          <div class="sale-total-box"><div class="label">Debt</div><div class="value" id="saleDebtPreview">—</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+          <button type="button" class="btn btn-primary" id="completeSaleBtn">Complete sale</button>
+          <button type="button" class="btn btn-ghost" id="printCurrentSaleBtn">Print invoice</button>
+          <button type="button" class="btn btn-ghost" id="cancelSaleEdit" style="display:none;">Cancel edit</button>
+          <span class="form-msg" id="saleMsg"></span>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 class="panel-head-row">Sales log <input type="text" id="salesSearch" class="panel-search" placeholder="Search item, customer, or date…"></h2>
+        <div id="salesTableWrap"></div>
+      </div>
+    </section>
+
+    <!-- PROMO CODES / COUPONS MANAGEMENT -->
+    <section class="view" id="view-coupons">
+      <div class="form-panel">
+        <h2 id="couponFormTitle">Create Promo Code / Coupon</h2>
+        <form id="couponForm">
+          <input type="hidden" id="couponEditId">
+          <div class="form-grid">
+            <div class="field span2">
+              <label>Coupon Code</label>
+              <input type="text" id="couponCode" placeholder="e.g. PETCY10" style="text-transform:uppercase;font-family:var(--font-mono);" required>
+            </div>
+            <div class="field">
+              <label>Discount Type</label>
+              <select id="couponType">
+                <option value="percent">Percentage (%)</option>
+                <option value="fixed">Fixed Amount</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Discount Value</label>
+              <input type="number" id="couponValue" min="0" step="any" placeholder="e.g. 10" required>
+            </div>
+            <div class="field">
+              <label>Usage Limit</label>
+              <input type="number" id="couponLimit" min="1" step="1" placeholder="e.g. 50">
+            </div>
+            <div class="field">
+              <label>Expiry Date</label>
+              <input type="date" id="couponExpiry">
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+            <button type="submit" class="btn btn-primary" id="saveCouponBtn">Save Coupon</button>
+            <button type="button" class="btn btn-ghost" id="cancelCouponEdit" style="display:none;">Cancel Edit</button>
+            <span class="form-msg" id="couponMsg"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-head-row">Active Promo Codes</h2>
+        <div id="couponsListWrap"></div>
+      </div>
+    </section>
+
+    <!-- PURCHASES -->
+    <section class="view" id="view-purchases">
+      <div class="form-panel">
+        <h2>Record a purchase</h2>
+        <form id="purchaseForm">
+          <div class="form-grid">
+            <div class="field"><label>Date</label><input type="date" id="purchDate" required></div>
+            <div class="field span2">
+              <label>Item</label>
+              <input type="text" id="purchItem" list="rawItemList" placeholder="Type or pick item" required>
+            </div>
+            <div class="field"><label>Quantity</label><input type="number" id="purchQty" min="1" step="1" required></div>
+            <div class="field"><label>Unit cost</label><input type="number" id="purchCost" min="0" step="any" required></div>
+            <div class="field"><label>Supplier (optional)</label><input type="text" id="purchSupplier" list="supplierList" placeholder="Supplier name"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+            <button type="submit" class="btn btn-primary">Add purchase</button>
+            <span class="form-msg" id="purchMsg"></span>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2 class="panel-head-row">Purchases log <input type="text" id="purchasesSearch" class="panel-search" placeholder="Search item, supplier, or date…"></h2>
+        <div id="purchTableWrap"></div>
+      </div>
+    </section>
+
+    <!-- INVENTORY (EXISTING GOODS) -->
+    <section class="view" id="view-inventory">
+      <div class="form-panel">
+        <h2 id="invFormTitle">Add an item</h2>
+        <form id="invForm">
+          <input type="hidden" id="invEditId">
+          <div class="form-grid">
+            <div class="field span2"><label>Item name</label><input type="text" id="invName" required></div>
+            <div class="field"><label>Barcode / SKU</label><input type="text" id="invBarcode" placeholder="e.g. 629104..."></div>
+            <div class="field"><label>Category</label><input type="text" id="invCategory" placeholder="e.g. Food, Shampoos"></div>
+            <div class="field"><label>Quantity on hand</label><input type="number" id="invQty" min="0" step="1" required></div>
+            <div class="field"><label>Cost price</label><input type="number" id="invCost" min="0" step="any" required></div>
+            <div class="field"><label>Sale price</label><input type="number" id="invPrice" min="0" step="any" required></div>
+            <div class="field"><label>Low stock alert below</label><input type="number" id="invThreshold" min="0" step="1" value="5"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+            <button type="submit" class="btn btn-primary" id="invSubmitBtn">Add item</button>
+            <button type="button" class="btn btn-ghost" id="invCancelEdit" style="display:none;">Cancel edit</button>
+            <span class="form-msg" id="invMsg"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-head-row">Current goods <input type="text" id="invSearch" class="panel-search" placeholder="Search name, barcode, category…"></h2>
+        <div id="invTableWrap"></div>
+      </div>
+
+      <div class="panel" style="border-left:4px solid var(--brick);">
+        <h2 class="panel-head-row">
+          <span>🐢 Slow-Moving &amp; Dead Stock Analysis <small style="font-size:12px;color:var(--petcy-gray);">(No sales for &gt;45 days)</small></span>
+        </h2>
+        <div id="deadStockWrap"></div>
+      </div>
+    </section>
+
+    <!-- BUNDLES -->
+    <section class="view" id="view-bundles">
+      <div class="form-panel">
+        <h2 id="bundleFormTitle">Create / Edit Product Bundle</h2>
+        <form id="bundleForm">
+          <input type="hidden" id="bundleEditId">
+          <div class="form-grid">
+            <div class="field span3">
+              <label>Bundle Name</label>
+              <input type="text" id="bundleName" placeholder="e.g. Cat Grooming Kit" required>
+            </div>
+            <div class="field span2">
+              <label>Bundle Sale Price</label>
+              <input type="number" id="bundlePrice" min="0" step="any" placeholder="Total Package Price" required>
+            </div>
+          </div>
+
+          <div class="form-grid" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line);">
+            <div class="field span3">
+              <label>Select Item from Existing Goods</label>
+              <input type="text" id="bundleItemSelect" list="rawItemList" placeholder="Pick item to add to bundle">
+            </div>
+            <div class="field">
+              <label>Quantity</label>
+              <input type="number" id="bundleItemQty" min="1" step="1" value="1">
+            </div>
+            <div class="field">
+              <button type="button" class="btn btn-ghost" id="addBundleItemBtn">Add to Bundle</button>
+            </div>
+          </div>
+
+          <div id="bundleBuilderWrap" style="margin-top:14px;"></div>
+
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+            <button type="submit" class="btn btn-primary" id="saveBundleBtn">Save Bundle</button>
+            <button type="button" class="btn btn-ghost" id="cancelBundleEdit" style="display:none;">Cancel Edit</button>
+            <span class="form-msg" id="bundleMsg"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-head-row">Saved Bundles</h2>
+        <div id="bundleListWrap"></div>
+      </div>
+    </section>
+
+    <!-- DAMAGED & SAMPLES -->
+    <section class="view" id="view-damaged-samples">
+      <div class="form-panel">
+        <h2>Record Damaged Goods or Free Sample</h2>
+        <p style="color:var(--petcy-gray);font-size:12.5px;margin-top:0;">Deducts quantity from stock and posts total cost value into Expenses automatically.</p>
+        <form id="writeOffForm">
+          <div class="form-grid">
+            <div class="field"><label>Date</label><input type="date" id="writeOffDate" required></div>
+            <div class="field"><label>Type</label>
+              <select id="writeOffType">
+                <option value="Damaged">Damaged / Expired</option>
+                <option value="Sample">Free Gift / Promo Sample</option>
+              </select>
+            </div>
+            <div class="field span2">
+              <label>Item</label>
+              <input type="text" id="writeOffItem" list="rawItemList" placeholder="Select item" required>
+            </div>
+            <div class="field"><label>Quantity</label><input type="number" id="writeOffQty" min="1" step="1" value="1" required></div>
+            <div class="field"><label>Reason / Note</label><input type="text" id="writeOffNote" placeholder="e.g. broken seal, VIP gift"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+            <button type="submit" class="btn btn-primary">Process Write-off</button>
+            <span class="form-msg" id="writeOffMsg"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-head-row">Damaged &amp; Samples Log</h2>
+        <div id="writeOffTableWrap"></div>
+      </div>
+    </section>
+
+    <!-- CUSTOMERS -->
+    <section class="view" id="view-customers">
+      <div class="form-panel">
+        <h2 id="custFormTitle">Add a customer</h2>
+        <form id="custForm">
+          <input type="hidden" id="custEditId">
+          <div class="form-grid">
+            <div class="field span2"><label>Name</label><input type="text" id="custName" required></div>
+            <div class="field span2"><label>Mobile number</label><input type="tel" id="custMobile" placeholder="e.g. 079 123 4567" required></div>
+            <div class="field span2"><label>Address</label><input type="text" id="custAddress" placeholder="Street, city"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+            <button type="submit" class="btn btn-primary" id="custSubmitBtn">Add customer</button>
+            <button type="button" class="btn btn-ghost" id="custCancelEdit" style="display:none;">Cancel edit</button>
+            <span class="form-msg" id="custMsg"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-head-row">
+          <span>Customer Directory</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="custSegmentFilter" class="cart-input" style="max-width:140px;">
+              <option value="">All Segments</option>
+              <option value="VIP">⭐ VIP</option>
+              <option value="Active">🟢 Active</option>
+              <option value="Inactive">🔴 Inactive (&gt;45d)</option>
+              <option value="New">🔵 New</option>
+            </select>
+            <input type="text" id="customersSearch" class="panel-search" placeholder="Search name, mobile, address…">
+          </div>
+        </h2>
+        <div id="custTableWrap"></div>
+      </div>
+
+      <div class="panel" id="customerLedgerPanel">
+        <h2 id="customerLedgerTitle">Customer ledger</h2>
+        <div id="customerLedgerWrap"><div class="empty-state">Choose "View ledger" beside a customer.</div></div>
+        <div style="padding:0 18px 18px;">
+          <div class="form-grid" style="margin-top:14px;">
+            <div class="field"><label>Payment amount</label><input type="number" id="customerPaymentAmount" min="0" step="any"></div>
+            <div class="field"><label>Date</label><input type="date" id="customerPaymentDate"></div>
+            <div class="field span2"><label>Note</label><input type="text" id="customerPaymentNote"></div>
+            <div class="field"><button type="button" class="btn btn-primary" id="addCustomerPaymentBtn">Record payment</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DAILY ORDERS -->
+    <section class="view" id="view-daily-orders">
+      <div class="form-panel">
+        <h2 id="orderFormTitle">Add daily order</h2>
+        <form id="dailyOrderForm">
+          <div class="form-grid">
+            <div class="field span2">
+              <label>Select Existing Customer (Optional)</label>
+              <select id="orderCustomerSelect"><option value="">Walk-in / New customer</option></select>
+            </div>
+            <div class="field">
+              <label>Customer name</label>
+              <input id="orderCustomerName" list="customerList" placeholder="Search or type name" required>
+            </div>
+            <div class="field">
+              <label>Phone number</label>
+              <input id="orderCustomerPhone" type="tel" placeholder="07XXXXXXXX" required>
+            </div>
+            <div class="field span2">
+              <label>Address</label>
+              <input id="orderAddress" placeholder="City, Area, Street" required>
+            </div>
+            <div class="field">
+              <label>Date</label>
+              <input id="orderDate" type="date" required>
+            </div>
+            <div class="field span2">
+              <label>Order details</label>
+              <input id="orderDetails" required placeholder="e.g. 2x Dry Food, 1x Shampoo...">
+            </div>
+            <div class="field">
+              <label>Order total</label>
+              <input id="orderSaleTotal" type="number" min="0" step="any" value="0">
+            </div>
+            <div class="field">
+              <label>Delivery company</label>
+              <input id="orderDeliveryPartner" placeholder="e.g. Aramex, Local">
+            </div>
+            <div class="field">
+              <label>Tracking number</label>
+              <input id="orderTrackingNumber">
+            </div>
+            <div class="field">
+              <label>Delivery fee</label>
+              <input id="orderDeliveryFee" type="number" min="0" step="any" value="0">
+            </div>
+            <div class="field">
+              <label>Expected delivery</label>
+              <input id="orderExpectedDelivery" type="date">
+            </div>
+            <div class="field">
+              <label>Status</label>
+              <select id="orderStatus">
+                <option value="جاهز">جاهز</option>
+                <option value="قيد التجهيز">قيد التجهيز</option>
+                <option value="في الشركة">في الشركة</option>
+                <option value="تم التسليم">تم التسليم</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+            <button class="btn btn-primary" type="submit" id="orderSubmitBtn">Add order</button>
+            <button class="btn btn-ghost" type="button" id="exportOrdersCsvBtn">Export today CSV</button>
+            <button class="btn btn-ghost" type="button" id="openPackingSlipBtn">📦 Packing &amp; Quality Checklist</button>
+            <button class="btn btn-ghost" type="button" id="cancelOrderEdit" style="display:none;">Cancel edit</button>
+            <span class="form-msg" id="orderMsg"></span>
+          </div>
+          <input type="hidden" id="orderEditId">
+        </form>
+      </div>
+
+      <div class="panel" id="packingChecklistPanel" style="display:none; border:2px solid var(--petcy-teal);">
+        <h2 class="panel-head-row">
+          <span>📦 Packing &amp; Quality Picking Checklist</span>
+          <button class="btn btn-ghost" type="button" id="printPackingSlipBtn">Print Packing List</button>
+        </h2>
+        <div style="padding:14px 18px;" id="packingListWrap"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Order board</h2>
+        <div id="ordersKanbanWrap" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:14px;"></div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-head-row">Daily orders <input type="text" id="ordersSearch" class="panel-search" placeholder="Search customer, phone, address, order…"></h2>
+        <div style="padding:12px 18px;border-bottom:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap;">
+          <select id="ordersStatusFilter" class="cart-input">
+            <option value="">All statuses</option>
+            <option>جاهز</option>
+            <option>قيد التجهيز</option>
+            <option>في الشركة</option>
+            <option>تم التسليم</option>
+          </select>
+          <input id="ordersDateFilter" type="date" class="cart-input">
+        </div>
+        <div id="dailyOrdersWrap"></div>
+      </div>
+    </section>
+
+    <!-- DELIVERY -->
+    <section class="view" id="view-delivery">
+      <div class="form-panel">
+        <h2>Delivery tracking</h2>
+        <div class="form-grid">
+          <div class="field"><label>Company</label><input id="deliveryFilterCourier"></div>
+          <div class="field"><label>Status</label>
+            <select id="deliveryFilterStatus">
+              <option value="">All</option>
+              <option>جاهز</option>
+              <option>قيد التجهيز</option>
+              <option>في الشركة</option>
+              <option>تم التسليم</option>
+            </select>
+          </div>
+          <div class="field"><label>Date</label><input id="deliveryFilterDate" type="date"></div>
+        </div>
+      </div>
+      <div class="panel"><h2>Delivery log</h2><div id="deliveryWrap"></div></div>
+    </section>
+
+    <!-- STOCK MOVEMENTS -->
+    <section class="view" id="view-stock-movements">
+      <div class="form-panel">
+        <h2>Stock movement history</h2>
+        <div class="form-grid">
+          <div class="field span2"><label>Product</label><input id="movementProductSearch" list="rawItemList" placeholder="Select or type a product"></div>
+          <div class="field"><button type="button" class="btn btn-primary" id="movementFilterBtn">Filter</button></div>
+          <div class="field"><button type="button" class="btn btn-ghost" id="movementClearBtn">Clear</button></div>
+        </div>
+      </div>
+      <div class="panel"><h2>Movement log</h2><div id="stockMovementWrap"></div></div>
+    </section>
+
+    <!-- STOCKTAKE -->
+    <section class="view" id="view-stocktake">
+      <div class="form-panel">
+        <h2>Physical stocktake</h2>
+        <p style="color:#647271;line-height:1.6">Compare the physical quantity with the quantity in the system and record the difference.</p>
+        <form id="stocktakeForm">
+          <div class="form-grid">
+            <div class="field span2"><label>Product</label><input id="stocktakeItem" list="rawItemList" required></div>
+            <div class="field"><label>System quantity</label><input id="stocktakeSystemQty" type="number" readonly></div>
+            <div class="field"><label>Physical quantity</label><input id="stocktakePhysicalQty" type="number" min="0" step="1" required></div>
+            <div class="field span2"><label>Reason / note</label><input id="stocktakeNote" placeholder="e.g. damaged, counting correction"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+            <button type="submit" class="btn btn-primary">Post adjustment</button>
+            <span class="form-msg" id="stocktakeMsg"></span>
+          </div>
+        </form>
+      </div>
+      <div class="panel"><h2>Stocktake history</h2><div id="stocktakeWrap"></div></div>
+    </section>
+
+    <!-- DAILY CLOSE -->
+    <section class="view" id="view-daily-close">
+      <div class="form-panel">
+        <h2>End-of-day close</h2>
+        <div class="form-grid">
+          <div class="field"><label>Date</label><input type="date" id="closeDate"></div>
+          <div class="field"><label>Opening cash</label><input type="number" id="openingCash" min="0" step="any" value="0"></div>
+          <div class="field"><label>Counted cash</label><input type="number" id="countedCash" min="0" step="any" value="0"></div>
+          <div class="field"><button type="button" class="btn btn-primary" id="calculateCloseBtn">Calculate close</button></div>
+        </div>
+      </div>
+      <div class="cards">
+        <div class="card"><div class="k">Sales</div><div class="v" id="closeSales">—</div></div>
+        <div class="card"><div class="k">Expenses</div><div class="v" id="closeExpenses">—</div></div>
+        <div class="card"><div class="k">Paid by cash</div><div class="v" id="closeCashSales">—</div></div>
+        <div class="card"><div class="k">Expected cash</div><div class="v" id="closeExpectedCash">—</div></div>
+        <div class="card"><div class="k">Cash difference</div><div class="v" id="closeDifference">—</div></div>
+      </div>
+      <div class="panel"><h2>Close history</h2><div id="closeHistoryWrap"></div></div>
+    </section>
+
+    <!-- SUPPLIERS -->
+    <section class="view" id="view-suppliers">
+      <div class="form-panel">
+        <h2 id="supplierFormTitle">Add a supplier</h2>
+        <form id="supplierForm">
+          <input type="hidden" id="supplierEditId">
+          <div class="form-grid">
+            <div class="field span2"><label>Name</label><input id="supplierName" required></div>
+            <div class="field span2"><label>Mobile</label><input id="supplierMobile" type="tel"></div>
+            <div class="field span2"><label>Address</label><input id="supplierAddress"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+            <button class="btn btn-primary" type="submit" id="supplierSubmitBtn">Add supplier</button>
+            <button class="btn btn-ghost" type="button" id="supplierCancelEdit" style="display:none;">Cancel edit</button>
+            <span class="form-msg" id="supplierMsg"></span>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2 class="panel-head-row">Supplier list <input type="text" id="suppliersSearch" class="panel-search" placeholder="Search supplier…"></h2>
+        <div id="supplierTableWrap"></div>
+      </div>
+      <div class="panel">
+        <h2 id="supplierLedgerTitle">Supplier ledger</h2>
+        <div id="supplierLedgerWrap"><div class="empty-state">Choose "View ledger" beside a supplier.</div></div>
+      </div>
+    </section>
+
+    <!-- RETURNS -->
+    <section class="view" id="view-returns">
+      <div class="form-panel">
+        <h2>Process a return</h2>
+        <form id="returnForm">
+          <div class="form-grid">
+            <div class="field"><label>Return type</label>
+              <select id="returnType"><option value="sale">Customer return</option><option value="purchase">Supplier return</option></select>
+            </div>
+            <div class="field"><label>Date</label><input type="date" id="returnDate" required></div>
+            <div class="field span2"><label>Reference invoice / purchase ID</label><input id="returnReference" placeholder="Optional"></div>
+            <div class="field span2"><label>Item</label><input id="returnItem" list="rawItemList" required></div>
+            <div class="field"><label>Quantity</label><input type="number" id="returnQty" min="1" step="1" required></div>
+            <div class="field"><label>Unit amount</label><input type="number" id="returnAmount" min="0" step="any" required></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px;">
+            <button class="btn btn-primary" type="submit">Process return</button>
+            <span class="form-msg" id="returnMsg"></span>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2 class="panel-head-row">Returns log <input type="text" id="returnsSearch" class="panel-search" placeholder="Search item, date, reference…"></h2>
+        <div id="returnsTableWrap"></div>
+      </div>
+    </section>
+
+    <!-- EXPENSES -->
+    <section class="view" id="view-expenses">
+      <div class="form-panel">
+        <h2>Record an expense</h2>
+        <form id="expenseForm">
+          <div class="form-grid">
+            <div class="field"><label>Date</label><input type="date" id="expenseDate" required></div>
+            <div class="field span2"><label>Expense</label><input type="text" id="expenseName" placeholder="e.g. Rent, transport, packaging" required></div>
+            <div class="field"><label>Amount</label><input type="number" id="expenseAmount" min="0" step="any" required></div>
+            <div class="field"><label>Category</label>
+              <select id="expenseCategory"><option>General</option><option>Rent</option><option>Transport</option><option>Packaging</option><option>Damaged Goods</option><option>Promo Samples</option><option>Utilities</option><option>Marketing</option><option>Wages</option><option>Other</option></select>
+            </div>
+            <div class="field"><label>Note</label><input type="text" id="expenseNote" placeholder="Optional"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px">
+            <button type="submit" class="btn btn-primary">Add expense</button>
+            <span class="form-msg" id="expenseMsg"></span>
+          </div>
+        </form>
+      </div>
+      <div class="panel"><h2 class="panel-head-row">Expenses log <input type="text" id="expensesSearch" class="panel-search" placeholder="Search expense, category, date…"></h2><div id="expensesTableWrap"></div></div>
+    </section>
+
+    <!-- REPORTS & MOM MATRIX -->
+    <section class="view" id="view-reports">
+      <div class="form-panel">
+        <h2>Reports</h2>
+        <div class="form-grid">
+          <div class="field"><label>Report type</label><select id="reportPeriod"><option value="day">Daily</option><option value="month">Monthly</option></select></div>
+          <div class="field span2"><label>Date</label><input type="date" id="reportDate"></div>
+          <div class="field"><button type="button" class="btn btn-primary" id="generateReportBtn">Generate report</button> <button type="button" class="btn btn-ghost" id="exportReportCsvBtn">Export CSV</button></div>
+        </div>
+      </div>
+      <div class="cards">
+        <div class="card"><div class="k">Sales</div><div class="v" id="reportSales">—</div></div>
+        <div class="card"><div class="k">Purchases</div><div class="v" id="reportPurchases">—</div></div>
+        <div class="card"><div class="k">Expenses</div><div class="v" id="reportExpenses">—</div></div>
+        <div class="card"><div class="k">Gross profit</div><div class="v good" id="reportGrossProfit">—</div></div>
+        <div class="card"><div class="k">Net profit</div><div class="v good" id="reportNetProfit">—</div></div>
+      </div>
+      <div class="panel"><h2>Report summary</h2><div id="reportSummary" class="empty-state"></div></div>
+
+      <div class="panel" style="border-top:3px solid var(--petcy-teal);margin-top:24px;">
+        <h2>📈 Month-over-Month (MoM) Growth Matrix</h2>
+        <div style="padding:14px 18px;" id="momGrowthCardsWrap"></div>
+        <div id="momTableWrap"></div>
+      </div>
+    </section>
+
+    <!-- BACKUP & DANGER ZONE -->
+    <section class="view" id="view-backup">
+      <div class="form-panel">
+        <h2>Backup &amp; storage</h2>
+        <div class="sale-totals">
+          <div class="sale-total-box"><div class="label">Storage</div><div class="value">localStorage</div></div>
+          <div class="sale-total-box"><div class="label">Backup status</div><div class="value" id="backupStatusLabel">—</div></div>
+          <div class="sale-total-box"><div class="label">Last backup</div><div class="value" id="lastBackupLabel">Never</div></div>
+          <div class="sale-total-box"><div class="label">Reminder</div><div class="value">Every 7 days</div></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
+          <button class="btn btn-primary" id="downloadFullBackupBtn" type="button">Download full backup</button>
+          <button class="btn btn-ghost" id="saveToIndexedDbBtn" type="button">Copy data to IndexedDB</button>
+          <button class="btn btn-ghost" id="restoreFromIndexedDbBtn" type="button">Restore from IndexedDB</button>
+        </div>
+        <div class="form-msg" id="backupActionMsg" style="margin-top:12px;"></div>
+      </div>
+
+      <!-- DANGER ZONE: WIPE DATA -->
+      <div class="form-panel" style="border:1.5px solid var(--brick);background:#FFF9F9;">
+        <h2 style="color:var(--brick);">⚠️ Danger Zone (Reset All Data)</h2>
+        <p style="color:var(--petcy-gray);font-size:13px;line-height:1.6;margin-top:0;">
+          This will permanently delete all store records, inventory, sales, customers, orders, and financial history. 
+          Make sure to download a full backup before proceeding!
+        </p>
+        <button class="btn" id="wipeAllDataBtn" type="button" style="background:var(--brick);color:#FFF;box-shadow:0 6px 16px rgba(216,91,85,0.3);">
+          🗑 Wipe All Store Data &amp; Reset System
+        </button>
+      </div>
+    </section>
+
+    <!-- MIGRATION -->
+    <section class="view" id="view-migration">
+      <div class="form-panel">
+        <h2>Move data from the old version</h2>
+        <p style="line-height:1.6;color:#5b5f52">
+          Your old version stores data in browser Local Storage under the same keys as this version.
+          Because the old and new websites have different origins, use the one-time code below on the old site,
+          download the backup file, then import it here.
+        </p>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+          <button type="button" class="btn btn-primary" id="exportMigrationCodeBtn">Copy old-site export code</button>
+          <label class="btn" style="cursor:pointer;">
+            Import old backup
+            <input id="migrationFileInput" type="file" accept=".json,application/json" hidden>
+          </label>
+        </div>
+
+        <div id="migrationStatus" class="form-msg" style="min-height:18px;"></div>
+
+        <div class="panel" style="margin-top:18px;">
+          <h2>Old-site code</h2>
+          <textarea id="oldSiteCode" readonly
+            style="width:100%;min-height:190px;resize:vertical;font-family:monospace;font-size:12px;direction:ltr;"></textarea>
+        </div>
+
+        <div class="panel" style="margin-top:18px;">
+          <h2>Alternative: paste backup text</h2>
+          <textarea id="manualMigrationText" placeholder="Paste the contents of the JSON backup file here…"
+            style="width:100%;min-height:150px;resize:vertical;font-family:monospace;font-size:12px;direction:ltr;"></textarea>
+          <button type="button" class="btn btn-primary" id="importPastedBackup" style="margin-top:10px;">Import pasted backup</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- DATA LISTS -->
+<datalist id="itemList"></datalist>
+<datalist id="rawItemList"></datalist>
+<datalist id="customerList"></datalist>
+<datalist id="supplierList"></datalist>
+
+<script>
+(function(){
+  "use strict";
+
+  let inventory = [];
+  let sales = [];
+  let purchases = [];
+  let customers = [];
+  let expenses = [];
+  let suppliers = [];
+  let returnsLog = [];
+  let customerPayments = [];
+  let supplierPayments = [];
+  let stockMovements = [];
+  let inventoryAudits = [];
+  let auditLog = [];
+  let dailyClosures = [];
+  let dailyOrders = [];
+  let bundles = [];
+  let writeOffs = [];
+  let coupons = [];
+  let soundEnabled = true;
+
+  let currentBundleItems = [];
+  let appliedCoupon = null;
+  let html5QrScanner = null;
+
+  let salesSearchTerm = "";
+  let invSearchTerm = "";
+  let customersSearchTerm = "";
+  let purchasesSearchTerm = "";
+  let storeName = "";
+  let currency = "$";
+  let selectedCustomerId = null;
+
+  const $ = (id) => document.getElementById(id);
+  const uid = () => 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8);
+  const todayStr = () => new Date().toISOString().slice(0,10);
+  const money = (n) => currency + Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  const escapeHtml = (s) => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  /* ---------- SAFE AUDIO ENGINE INITIALIZATION ---------- */
+  let audioCtx = null;
+
+  function getAudioContext() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+
+  function playSound(type) {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      const now = ctx.currentTime;
+
+      if (type === 'beep') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1480, now);
+        osc.frequency.exponentialRampToValueAtTime(1860, now + 0.04);
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      } 
+      else if (type === 'cash') {
+        const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          const noteTime = now + (idx * 0.045);
+          osc.type = idx === notes.length - 1 ? 'triangle' : 'sine';
+          osc.frequency.setValueAtTime(freq, noteTime);
+          gain.gain.setValueAtTime(0.18, noteTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.45);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(noteTime);
+          osc.stop(noteTime + 0.45);
+        });
+      } 
+      else if (type === 'success') {
+        const chords = [659.25, 830.61, 987.77];
+        chords.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          const time = now + (idx * 0.06);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, time);
+          gain.gain.setValueAtTime(0.15, time);
+          gain.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(time);
+          osc.stop(time + 0.35);
+        });
+      } 
+      else if (type === 'delete') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.12);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      }
+    } catch(e) {
+      console.warn('Audio synthesis issue', e);
+    }
+  }
+
+  if($('soundToggleBtn')){
+    $('soundToggleBtn').addEventListener('click', ()=>{
+      soundEnabled = !soundEnabled;
+      $('soundToggleBtn').textContent = soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+      $('soundToggleBtn').style.opacity = soundEnabled ? '1' : '0.6';
+      if(soundEnabled) playSound('beep');
+    });
+  }
+
+  /* ---------- MOBILE SIDEBAR TOGGLE ---------- */
+  if($('mobileMenuToggle')){
+    $('mobileMenuToggle').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      $('appSidebar').classList.toggle('open');
+    });
+  }
+
+  document.addEventListener('click', (e)=>{
+    if(window.innerWidth <= 900 && $('appSidebar').classList.contains('open')){
+      if(!$('appSidebar').contains(e.target) && e.target !== $('mobileMenuToggle')){
+        $('appSidebar').classList.remove('open');
+      }
+    }
+  });
+
+  function loadAll(){
+    try {
+      inventory = JSON.parse(localStorage.getItem('inventory') || '[]');
+      sales = JSON.parse(localStorage.getItem('sales') || '[]');
+      purchases = JSON.parse(localStorage.getItem('purchases') || '[]');
+      customers = JSON.parse(localStorage.getItem('customers') || '[]');
+      suppliers = JSON.parse(localStorage.getItem('suppliers') || '[]');
+      returnsLog = JSON.parse(localStorage.getItem('returnsLog') || '[]');
+      customerPayments = JSON.parse(localStorage.getItem('customerPayments') || '[]');
+      supplierPayments = JSON.parse(localStorage.getItem('supplierPayments') || '[]');
+      stockMovements = JSON.parse(localStorage.getItem('stockMovements') || '[]');
+      inventoryAudits = JSON.parse(localStorage.getItem('inventoryAudits') || '[]');
+      auditLog = JSON.parse(localStorage.getItem('auditLog') || '[]');
+      dailyClosures = JSON.parse(localStorage.getItem('dailyClosures') || '[]');
+      dailyOrders = JSON.parse(localStorage.getItem('dailyOrders') || '[]');
+      bundles = JSON.parse(localStorage.getItem('bundles') || '[]');
+      writeOffs = JSON.parse(localStorage.getItem('writeOffs') || '[]');
+      coupons = JSON.parse(localStorage.getItem('coupons') || '[]');
+      expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+      storeName = localStorage.getItem('store-name') || '';
+      currency = localStorage.getItem('currency-symbol') || '$';
+    } catch(e){
+      console.error('Load error', e);
+    }
+  }
+
+  function saveInventory(){ localStorage.setItem('inventory', JSON.stringify(inventory)); }
+  function saveSales(){ localStorage.setItem('sales', JSON.stringify(sales)); }
+  function savePurchases(){ localStorage.setItem('purchases', JSON.stringify(purchases)); }
+  function saveCustomers(){ localStorage.setItem('customers', JSON.stringify(customers)); }
+  function saveSuppliers(){ localStorage.setItem('suppliers', JSON.stringify(suppliers)); }
+  function saveReturns(){ localStorage.setItem('returnsLog', JSON.stringify(returnsLog)); }
+  function saveCustomerPayments(){ localStorage.setItem('customerPayments', JSON.stringify(customerPayments)); }
+  function saveSupplierPayments(){ localStorage.setItem('supplierPayments', JSON.stringify(supplierPayments)); }
+  function saveStockMovements(){ localStorage.setItem('stockMovements', JSON.stringify(stockMovements)); }
+  function saveInventoryAudits(){ localStorage.setItem('inventoryAudits', JSON.stringify(inventoryAudits)); }
+  function saveAuditLog(){ localStorage.setItem('auditLog', JSON.stringify(auditLog)); }
+  function saveBundles(){ localStorage.setItem('bundles', JSON.stringify(bundles)); }
+  function saveWriteOffs(){ localStorage.setItem('writeOffs', JSON.stringify(writeOffs)); }
+  function saveCoupons(){ localStorage.setItem('coupons', JSON.stringify(coupons)); }
+  function saveDailyOrders(){ localStorage.setItem('dailyOrders', JSON.stringify(dailyOrders)); }
+  function saveDailyClosures(){ localStorage.setItem('dailyClosures', JSON.stringify(dailyClosures)); }
+  function saveExpenses(){ localStorage.setItem('expenses', JSON.stringify(expenses)); }
+  function saveStoreName(){ localStorage.setItem('store-name', storeName); }
+  function saveCurrency(){ localStorage.setItem('currency-symbol', currency); }
+
+  function findItemByName(name){
+    const n = (name||'').trim().toLowerCase();
+    if(!n) return null;
+    return inventory.find(i => i.name.trim().toLowerCase() === n) || null;
+  }
+  function findItemByBarcode(barcode){
+    const b = (barcode||'').trim();
+    if(!b) return null;
+    return inventory.find(i => (i.barcode||'').trim() === b) || null;
+  }
+  function findBundleByName(name){
+    const clean = (name||'').replace(/^\[Bundle\]\s*/i, '').trim().toLowerCase();
+    if(!clean) return null;
+    return bundles.find(b => b.name.trim().toLowerCase() === clean) || null;
+  }
+  function findCustomerByName(name){
+    const n = (name||'').trim().toLowerCase();
+    if(!n) return null;
+    return customers.find(c => c.name.trim().toLowerCase() === n) || null;
+  }
+  function findCustomerByPhone(phone){
+    const p = (phone||'').trim().replace(/[\s-]/g,'');
+    if(!p) return null;
+    return customers.find(c => (c.mobile||'').trim().replace(/[\s-]/g,'') === p) || null;
+  }
+
+  /* ---------------- NAV ---------------- */
+  const titles = {
+    dashboard: ['Dashboard','Overview of your store, at a glance'],
+    sales: ['Sales & Barcode','Record sales with instant barcode scanning'],
+    purchases: ['Purchases','Record what came in, and from whom'],
+    inventory: ['Existing Goods','What you have on hand right now'],
+    bundles: ['Product Bundles','Manage packages and special combos'],
+    coupons: ['Promo Codes & Coupons','Configure promotional vouchers & discounts'],
+    'damaged-samples': ['Damaged & Promo Samples','Record write-offs and complimentary gifts'],
+    customers: ['Customers & Segmentation','Track VIPs, active and inactive customers'],
+    'stock-movements': ['Stock Movements','Detailed in & out logs'],
+    stocktake: ['Stocktake','Audit and adjust inventory count'],
+    'daily-close': ['Daily Close','End of day cash reconcilation'],
+    'daily-orders': ['Daily Orders & Packing','Customer requests, delivery and packing lists'],
+    delivery: ['Delivery Tracking','Couriers and shipping log'],
+    suppliers: ['Suppliers','Vendor ledgers and contacts'],
+    returns: ['Returns','Sales and purchase return transactions'],
+    expenses: ['Expenses','Track operational and daily costs'],
+    reports: ['Reports & MoM Matrix','Financial metrics, comparisons and summaries'],
+    backup: ['Backup','Secure your local records'],
+    migration: ['Migration','Transfer data between versions']
+  };
+
+  document.querySelectorAll('.nav-tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      tab.classList.add('active');
+      const view = tab.dataset.view;
+      if($('view-'+view)){
+        $('view-'+view).classList.add('active');
+        $('pageTitle').textContent = titles[view] ? titles[view][0] : view;
+        $('pageSub').textContent = titles[view] ? titles[view][1] : '';
+      }
+      if(window.innerWidth <= 900){
+        $('appSidebar').classList.remove('open');
+      }
+      renderAll();
+    });
+  });
+
+  /* ---------------- RENDER HELPERS ---------------- */
+  function renderItemList(){
+    const goodsOpts = inventory.map(i=>`<option value="${escapeHtml(i.name)}">${i.barcode ? ' ['+escapeHtml(i.barcode)+']' : ''}</option>`);
+    const bundleOpts = bundles.map(b=>`<option value="[Bundle] ${escapeHtml(b.name)}">`);
+    $('itemList').innerHTML = [...goodsOpts, ...bundleOpts].join('');
+
+    if($('rawItemList')){
+      $('rawItemList').innerHTML = goodsOpts.join('');
+    }
+  }
+
+  function renderCustomerDatalist(){
+    $('customerList').innerHTML = customers.map(c=>`<option value="${escapeHtml(c.name)}">${escapeHtml(c.mobile||'')}</option>`).join('');
+    renderOrderCustomerList();
+  }
+
+  function renderTill(){
+    const totalSales = sales.reduce((s,r)=>s+r.total,0);
+    const totalPurch = purchases.reduce((s,r)=>s+r.total,0);
+    const net = totalSales - totalPurch;
+    const el = $('tillValue');
+    el.textContent = money(net);
+    el.className = 'till-value ' + (net >= 0 ? 'pos' : 'neg');
+  }
+
+  function renderDashboard(){
+    const month = todayStr().slice(0,7);
+    const salesMonth = sales.filter(s=>s.date.slice(0,7)===month).reduce((s,r)=>s+r.total,0);
+    const purchMonth = purchases.filter(p=>p.date.slice(0,7)===month).reduce((s,r)=>s+r.total,0);
+    const invValue = inventory.reduce((s,i)=>s+ (i.qty*i.cost),0);
+    const lowCount = inventory.filter(i=>i.qty <= i.threshold).length;
+    const expMonth = (expenses||[]).filter(e=>String(e.date||'').slice(0,7)===month).reduce((s,r)=>s+Number(r.amount||0),0);
+
+    $('cardSalesMonth').textContent = money(salesMonth);
+    $('cardPurchMonth').textContent = money(purchMonth);
+    $('cardInvValue').textContent = money(invValue);
+    const lowEl = $('cardLowStock');
+    lowEl.textContent = lowCount;
+    lowEl.className = 'v' + (lowCount>0 ? ' alert':' good');
+    $('cardCustomers').textContent = customers.length;
+    $('cardDailyOrders').textContent = (dailyOrders||[]).filter(o=>o.date===todayStr()).length;
+    $('cardExpensesMonth').textContent = money(expMonth);
+
+    const grossProfitMonth = sales.filter(s=>s.date.slice(0,7)===month).reduce((sum,s)=>sum+(s.items||[]).reduce((x,it)=>{
+      if(it.cost==null || isNaN(Number(it.cost))) return x;
+      return x+(Number(it.price)-Number(it.cost))*Number(it.qty);
+    },0),0);
+    $('cardNetProfitMonth').textContent = money(grossProfitMonth - expMonth);
+
+    renderReceivables();
+    renderDashboardAlerts();
+    renderTopProducts();
+
+    const combined = [
+      ...sales.map(s=>({
+        date:s.date, id:s.id, type:'sale', total:s.total,
+        label: (s.items||[]).map(it=>`${it.itemName} ×${it.qty}`).join(', ') || 'Sale'
+      })),
+      ...purchases.map(p=>({
+        date:p.date, id:p.id, type:'purchase', total:p.total,
+        label: `${p.itemName} · ${p.qty} unit${p.qty==1?'':'s'}`
+      })),
+      ...expenses.map(e=>({
+        date:e.date, id:e.id, type:'expense', total:e.amount,
+        label: `${e.name} · ${e.category||'General'}`
+      }))
+    ].sort((a,b)=> (b.date+b.id).localeCompare(a.date+a.id)).slice(0,8);
+
+    const list = $('recentList');
+    if(combined.length===0){
+      list.innerHTML = '<div class="empty-state">Nothing recorded yet. Add a sale, a purchase, or an item to get started.</div>';
+    } else {
+      list.innerHTML = combined.map(r=>`
+        <div class="recent-row">
+          <div><span class="tag ${r.type}">${r.type}</span>${escapeHtml(r.label)} · ${escapeHtml(r.date)}</div>
+          <div class="recent-amt">${money(r.total)}</div>
+        </div>
+      `).join('');
+    }
+  }
+
+  /* ---------------- INVENTORY ---------------- */
+  $('invForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const editId = $('invEditId').value;
+    const data = {
+      name: $('invName').value.trim(),
+      barcode: $('invBarcode').value.trim(),
+      category: $('invCategory').value.trim(),
+      qty: parseFloat($('invQty').value),
+      cost: parseFloat($('invCost').value),
+      price: parseFloat($('invPrice').value),
+      threshold: parseFloat($('invThreshold').value) || 0
+    };
+    if(!data.name || isNaN(data.qty) || isNaN(data.cost) || isNaN(data.price)) return;
+
+    if(editId){
+      const item = inventory.find(i=>i.id===editId);
+      if(item) Object.assign(item, data);
+    } else {
+      inventory.push({ id: uid(), ...data });
+    }
+    saveInventory();
+    resetInvForm();
+    playSound('success');
+    renderAll();
+  });
+
+  function startEditInv(id){
+    const item = inventory.find(i=>i.id===id);
+    if(!item) return;
+    $('invEditId').value = item.id;
+    $('invName').value = item.name;
+    $('invBarcode').value = item.barcode||'';
+    $('invCategory').value = item.category||'';
+    $('invQty').value = item.qty;
+    $('invCost').value = item.cost;
+    $('invPrice').value = item.price;
+    $('invThreshold').value = item.threshold;
+    $('invFormTitle').textContent = 'Edit item';
+    $('invSubmitBtn').textContent = 'Save changes';
+    $('invCancelEdit').style.display = 'inline-block';
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function resetInvForm(){
+    $('invForm').reset();
+    $('invEditId').value = '';
+    $('invFormTitle').textContent = 'Add an item';
+    $('invSubmitBtn').textContent = 'Add item';
+    $('invCancelEdit').style.display = 'none';
+  }
+  $('invCancelEdit').addEventListener('click', resetInvForm);
+
+  function deleteInv(id){
+    if(!confirm('Delete this item from your goods list?')) return;
+    inventory = inventory.filter(i=>i.id!==id);
+    saveInventory();
+    playSound('delete');
+    renderAll();
+  }
+
+  function renderInvTable(){
+    const wrap = $('invTableWrap');
+    if(!wrap) return;
+    if(!inventory.length){
+      wrap.innerHTML = '<div class="empty-state">No goods added yet. Use the form above to add your first item.</div>';
+      return;
+    }
+
+    const term = String(invSearchTerm || '').trim().toLowerCase();
+    const filtered = inventory.filter(i=>{
+      if(!term) return true;
+      return String(i.name || '').toLowerCase().includes(term) || 
+             String(i.barcode || '').toLowerCase().includes(term) ||
+             String(i.category || '').toLowerCase().includes(term);
+    });
+
+    if(!filtered.length){
+      wrap.innerHTML = '<div class="empty-state">No goods match your search.</div>';
+      return;
+    }
+
+    const rows = filtered.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''))).map(i=>{
+      const low = i.qty <= i.threshold;
+      const unitProfit = Number(i.price) - Number(i.cost);
+      const totalProfit = Number(i.qty) * unitProfit;
+
+      return `<tr class="${low ? 'row-low' : ''}">
+        <td><b>${escapeHtml(i.name)}</b>${low ? '<span class="pill-low">Low</span>' : ''}</td>
+        <td><span style="font-family:var(--font-mono);font-size:12px;background:var(--petcy-paper);padding:2px 6px;border-radius:4px;">${escapeHtml(i.barcode || '—')}</span></td>
+        <td>${escapeHtml(i.category || '—')}</td>
+        <td class="num">${i.qty}</td>
+        <td class="num">${money(i.cost)}</td>
+        <td class="num">${money(i.price)}</td>
+        <td class="num ${unitProfit < 0 ? 'profit-neg' : 'profit-pos'}">${money(unitProfit)}</td>
+        <td class="num">${money(i.qty * i.cost)}</td>
+        <td class="num ${totalProfit < 0 ? 'profit-neg' : 'profit-pos'}">${money(totalProfit)}</td>
+        <td>
+          <button class="btn-edit-text" data-edit-inv="${i.id}">Edit</button>
+          <button class="btn-danger-text" data-del-inv="${i.id}">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    wrap.innerHTML = `<table><thead><tr>
+      <th>Name</th><th>Barcode</th><th>Category</th><th>Qty</th><th>Cost</th><th>Price</th><th>Profit/unit</th><th>Value</th><th>Total profit</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+
+    wrap.querySelectorAll('[data-edit-inv]').forEach(btn=>btn.addEventListener('click',()=>startEditInv(btn.dataset.editInv)));
+    wrap.querySelectorAll('[data-del-inv]').forEach(btn=>btn.addEventListener('click',()=>deleteInv(btn.dataset.delInv)));
+    
+    renderDeadStock();
+  }
+
+  function renderDeadStock(){
+    const wrap = $('deadStockWrap');
+    if(!wrap) return;
+    const now = new Date().getTime();
+    const thresholdDays = 45 * 24 * 60 * 60 * 1000;
+
+    const deadItems = inventory.filter(inv => {
+      if(Number(inv.qty) <= 0) return false;
+      const matchedSales = sales.filter(s => (s.items||[]).some(it => 
+        (it.itemId === inv.id) || (it.itemName && it.itemName.toLowerCase() === inv.name.toLowerCase())
+      ));
+      if(!matchedSales.length) return true;
+      const latestDateStr = matchedSales.sort((a,b)=>b.date.localeCompare(a.date))[0].date;
+      const latestTime = new Date(latestDateStr).getTime();
+      return (now - latestTime) > thresholdDays;
+    });
+
+    if(!deadItems.length){
+      wrap.innerHTML = '<div style="padding:16px;color:var(--petcy-gray);font-size:13px;">✅ Great news! No stagnant stock detected in the last 45 days.</div>';
+      return;
+    }
+
+    const rows = deadItems.map(inv => {
+      const matchedSales = sales.filter(s => (s.items||[]).some(it => it.itemId === inv.id || (it.itemName && it.itemName.toLowerCase() === inv.name.toLowerCase())));
+      const lastSold = matchedSales.length ? matchedSales.sort((a,b)=>b.date.localeCompare(a.date))[0].date : 'Never Sold';
+      const tiedUpCapital = Number(inv.qty) * Number(inv.cost);
+
+      return `<tr>
+        <td><b>${escapeHtml(inv.name)}</b></td>
+        <td class="num">${inv.qty}</td>
+        <td>${escapeHtml(lastSold)}</td>
+        <td class="num" style="color:var(--brick);font-weight:600;">${money(tiedUpCapital)}</td>
+        <td>
+          <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" data-bundle-dead="${escapeHtml(inv.name)}">🎁 Create Bundle Deal</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    wrap.innerHTML = `<table><thead><tr>
+      <th>Stagnant Product</th><th>Stock On Hand</th><th>Last Sale Date</th><th>Tied-Up Capital</th><th>Recommendation</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+
+    wrap.querySelectorAll('[data-bundle-dead]').forEach(b => {
+      b.addEventListener('click', () => {
+        const pName = b.dataset.bundleDead;
+        document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+        const tab = document.querySelector('[data-view="bundles"]');
+        if(tab) tab.classList.add('active');
+        $('view-bundles').classList.add('active');
+        $('pageTitle').textContent = 'Product Bundles';
+        $('bundleName').value = 'Special Deal - ' + pName;
+        $('bundleItemSelect').value = pName;
+        $('bundleItemQty').value = '1';
+        $('addBundleItemBtn').click();
+        $('bundlePrice').focus();
+        window.scrollTo({top:0, behavior:'smooth'});
+      });
+    });
+  }
+
+  /* ---------------- BARCODE SCANNER ---------------- */
+  function handleBarcodeDetected(scannedCode){
+    const cleanCode = (scannedCode||'').trim();
+    if(!cleanCode) return;
+
+    const item = findItemByBarcode(cleanCode) || findItemByName(cleanCode);
+    if(item){
+      playSound('beep');
+      const existingInCart = cart.find(c => c.itemId === item.id);
+      if(existingInCart){
+        existingInCart.qty += 1;
+      } else {
+        cart.push({
+          itemId: item.id,
+          bundleId: null,
+          isBundle: false,
+          bundleItems: null,
+          itemName: item.name,
+          qty: 1,
+          price: Number(item.price || 0),
+          cost: Number(item.cost || 0)
+        });
+      }
+      renderCart();
+      $('saleMsg').textContent = `✅ Added: ${item.name}`;
+      setTimeout(()=>{$('saleMsg').textContent='';}, 2500);
+    } else {
+      alert(`No product found in Existing Goods with barcode: ${cleanCode}`);
+    }
+  }
+
+  $('barcodeQuickInput').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      handleBarcodeDetected(e.target.value);
+      e.target.value = '';
+    }
+  });
+
+  $('openBarcodeCamBtn').addEventListener('click', ()=>{
+    $('scannerContainer').style.display = 'flex';
+    if(window.Html5Qrcode){
+      html5QrScanner = new Html5Qrcode("barcodeReader");
+      html5QrScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 180 } },
+        (decodedText) => {
+          handleBarcodeDetected(decodedText);
+          closeScannerModal();
+        },
+        () => {}
+      ).catch(err => {
+        alert('Could not access camera: ' + err);
+        closeScannerModal();
+      });
+    } else {
+      alert('Barcode library loading... please try again.');
+    }
+  });
+
+  function closeScannerModal(){
+    if(html5QrScanner){
+      html5QrScanner.stop().then(()=>{
+        html5QrScanner.clear();
+        $('scannerContainer').style.display = 'none';
+      }).catch(()=>{
+        $('scannerContainer').style.display = 'none';
+      });
+    } else {
+      $('scannerContainer').style.display = 'none';
+    }
+  }
+
+  $('closeScannerBtn').addEventListener('click', closeScannerModal);
+
+  /* ---------------- PROMO CODES (COUPONS) ---------------- */
+  $('couponForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const editId = $('couponEditId').value;
+    const code = $('couponCode').value.trim().toUpperCase();
+    const type = $('couponType').value;
+    const val = parseFloat($('couponValue').value);
+    const limit = $('couponLimit').value ? parseInt($('couponLimit').value) : null;
+    const expiry = $('couponExpiry').value || null;
+
+    if(!code || isNaN(val) || val <= 0) return alert('Enter a valid coupon code and discount value.');
+
+    const couponData = {
+      id: editId || uid(),
+      code,
+      type,
+      value: val,
+      limit,
+      usedCount: 0,
+      expiry,
+      active: true
+    };
+
+    if(editId){
+      const idx = coupons.findIndex(c => c.id === editId);
+      if(idx >= 0) {
+        couponData.usedCount = coupons[idx].usedCount || 0;
+        coupons[idx] = couponData;
+      }
+    } else {
+      coupons.push(couponData);
+    }
+
+    saveCoupons();
+    resetCouponForm();
+    playSound('success');
+    renderCoupons();
+  });
+
+  function resetCouponForm(){
+    $('couponForm').reset();
+    $('couponEditId').value = '';
+    $('couponFormTitle').textContent = 'Create Promo Code / Coupon';
+    $('saveCouponBtn').textContent = 'Save Coupon';
+    $('cancelCouponEdit').style.display = 'none';
+  }
+  $('cancelCouponEdit').addEventListener('click', resetCouponForm);
+
+  function renderCoupons(){
+    const wrap = $('couponsListWrap');
+    if(!wrap) return;
+    if(!coupons.length){
+      wrap.innerHTML = '<div class="empty-state">No promo codes created yet.</div>';
+      return;
+    }
+
+    const rows = coupons.map(c => {
+      const isExpired = c.expiry && c.expiry < todayStr();
+      const isExhausted = c.limit && c.usedCount >= c.limit;
+      const statusText = !c.active ? 'Disabled' : isExpired ? 'Expired' : isExhausted ? 'Exhausted' : 'Active';
+      const statusClass = statusText === 'Active' ? 'badge-growth-pos' : 'badge-growth-neg';
+
+      return `<tr>
+        <td><b style="font-family:var(--font-mono);">${escapeHtml(c.code)}</b></td>
+        <td>${c.type === 'percent' ? c.value + '%' : money(c.value)}</td>
+        <td>${c.limit ? c.usedCount + ' / ' + c.limit : c.usedCount + ' (Unlimited)'}</td>
+        <td>${escapeHtml(c.expiry || 'No Expiry')}</td>
+        <td><span class="${statusClass}">${statusText}</span></td>
+        <td>
+          <button class="btn-edit-text" data-edit-coupon="${c.id}">Edit</button>
+          <button class="btn-danger-text" data-del-coupon="${c.id}">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    wrap.innerHTML = `<table><thead><tr>
+      <th>Code</th><th>Discount</th><th>Usage</th><th>Expiry</th><th>Status</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+
+    wrap.querySelectorAll('[data-edit-coupon]').forEach(btn => {
+      btn.addEventListener('click', ()=>{
+        const c = coupons.find(x => x.id === btn.dataset.editCoupon);
+        if(!c) return;
+        $('couponEditId').value = c.id;
+        $('couponCode').value = c.code;
+        $('couponType').value = c.type;
+        $('couponValue').value = c.value;
+        $('couponLimit').value = c.limit || '';
+        $('couponExpiry').value = c.expiry || '';
+        $('couponFormTitle').textContent = 'Edit Promo Code — ' + c.code;
+        $('saveCouponBtn').textContent = 'Save Changes';
+        $('cancelCouponEdit').style.display = 'inline-block';
+        window.scrollTo({top:0, behavior:'smooth'});
+      });
+    });
+
+    wrap.querySelectorAll('[data-del-coupon]').forEach(btn => {
+      btn.addEventListener('click', ()=>{
+        if(!confirm('Delete this promo code?')) return;
+        coupons = coupons.filter(x => x.id !== btn.dataset.delCoupon);
+        saveCoupons();
+        playSound('delete');
+        renderCoupons();
+      });
+    });
+  }
+
+  // Apply Promo in Sales Form
+  $('applyPromoCodeBtn').addEventListener('click', ()=>{
+    const input = $('salePromoCodeInput').value.trim().toUpperCase();
+    if(!input) return;
+
+    const coupon = coupons.find(c => c.code.toUpperCase() === input);
+    if(!coupon){
+      return alert('Promo code not found.');
+    }
+    if(!coupon.active){
+      return alert('This promo code is currently disabled.');
+    }
+    if(coupon.expiry && coupon.expiry < todayStr()){
+      return alert('This promo code has expired.');
+    }
+    if(coupon.limit && coupon.usedCount >= coupon.limit){
+      return alert('This promo code has reached its maximum usage limit.');
+    }
+
+    appliedCoupon = coupon;
+    $('saleDiscountType').value = coupon.type;
+    $('saleDiscountValue').value = coupon.value;
+    updateCartTotal();
+    playSound('cash');
+    $('saleMsg').textContent = `🎟 Coupon "${coupon.code}" applied!`;
+    setTimeout(()=>{$('saleMsg').textContent='';}, 3000);
+  });
+
+  /* ---------------- DAMAGED & SAMPLES (WRITE-OFFS) ---------------- */
+  $('writeOffDate').value = todayStr();
+
+  $('writeOffForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const date = $('writeOffDate').value || todayStr();
+    const type = $('writeOffType').value;
+    const itemName = $('writeOffItem').value.trim();
+    const qty = parseInt($('writeOffQty').value) || 1;
+    const note = $('writeOffNote').value.trim();
+
+    const item = findItemByName(itemName);
+    if(!item){
+      return alert('Please select an item currently in Existing Goods.');
+    }
+    if(item.qty < qty){
+      if(!confirm(`Warning: Stock on hand is ${item.qty}, but you are writing off ${qty}. Continue?`)) return;
+    }
+
+    const unitCost = Number(item.cost || 0);
+    const totalCost = unitCost * qty;
+
+    item.qty = Math.max(0, item.qty - qty);
+
+    const recId = uid();
+    writeOffs.push({
+      id: recId,
+      date,
+      type,
+      itemId: item.id,
+      itemName: item.name,
+      qty,
+      unitCost,
+      totalCost,
+      note
+    });
+
+    stockMovements.push({
+      id: uid(),
+      date,
+      type: type === 'Damaged' ? 'damaged-loss' : 'promo-sample',
+      itemId: item.id,
+      itemName: item.name,
+      qty: -qty,
+      reference: type
+    });
+
+    expenses.push({
+      id: uid(),
+      date,
+      name: `${type}: ${item.name} (x${qty})`,
+      amount: totalCost,
+      category: type === 'Damaged' ? 'Damaged Goods' : 'Promo Samples',
+      note: note || `Automated write-off entry`
+    });
+
+    saveInventory();
+    saveWriteOffs();
+    saveStockMovements();
+    saveExpenses();
+
+    playSound('delete');
+    $('writeOffForm').reset();
+    $('writeOffDate').value = todayStr();
+    $('writeOffQty').value = '1';
+    $('writeOffMsg').textContent = 'Write-off processed and logged to expenses.';
+    renderAll();
+  });
+
+  function renderWriteOffTable(){
+    const wrap = $('writeOffTableWrap');
+    if(!wrap) return;
+    if(!writeOffs.length){
+      wrap.innerHTML = '<div class="empty-state">No damaged items or samples logged.</div>';
+      return;
+    }
+
+    const rows = writeOffs.slice().reverse().map(w => `
+      <tr>
+        <td>${escapeHtml(w.date)}</td>
+        <td><span class="tag ${w.type.toLowerCase()}">${w.type}</span></td>
+        <td><b>${escapeHtml(w.itemName)}</b></td>
+        <td class="num">${w.qty}</td>
+        <td class="num">${money(w.totalCost)}</td>
+        <td>${escapeHtml(w.note || '—')}</td>
+        <td><button class="btn-danger-text" data-del-writeoff="${w.id}">Delete</button></td>
+      </tr>
+    `).join('');
+
+    wrap.innerHTML = `<table><thead><tr>
+      <th>Date</th><th>Type</th><th>Item</th><th>Qty</th><th>Cost Loss</th><th>Note</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+
+    wrap.querySelectorAll('[data-del-writeoff]').forEach(b => {
+      b.addEventListener('click', () => {
+        if(!confirm('Delete this write-off record? (Note: Adjust stock manually if required)')) return;
+        writeOffs = writeOffs.filter(x => x.id !== b.dataset.delWriteoff);
+        saveWriteOffs();
+        playSound('delete');
+        renderWriteOffTable();
+      });
+    });
+  }
+
+  /* ---------------- PRODUCT BUNDLES ---------------- */
+  function renderBundleBuilder(){
+    const wrap = $('bundleBuilderWrap');
+    if(!wrap) return;
+    if(currentBundleItems.length === 0){
+      wrap.innerHTML = '<div style="font-size:12.5px;color:#8a8d7e;padding:6px 0;">No items added to this bundle yet. Pick an item above and click "Add to Bundle".</div>';
+      return;
+    }
+    const rows = currentBundleItems.map((item, idx)=>`
+      <tr>
+        <td>${escapeHtml(item.name)}</td>
+        <td class="num"><input type="number" min="1" step="1" class="cart-input" value="${item.qty}" data-bundle-item-qty="${idx}"></td>
+        <td><button type="button" class="btn-danger-text" data-bundle-item-del="${idx}">Remove</button></td>
+      </tr>
+    `).join('');
+
+    wrap.innerHTML = `<table><thead><tr><th>Included Item</th><th>Qty</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+
+    wrap.querySelectorAll('[data-bundle-item-qty]').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        currentBundleItems[+inp.dataset.bundleItemQty].qty = Math.max(1, parseInt(inp.value)||1);
+      });
+    });
+    wrap.querySelectorAll('[data-bundle-item-del]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        currentBundleItems.splice(+btn.dataset.bundleItemDel, 1);
+        playSound('delete');
+        renderBundleBuilder();
+      });
+    });
+  }
+
+  $('addBundleItemBtn').addEventListener('click', ()=>{
+    const itemName = $('bundleItemSelect').value.trim();
+    const qty = Math.max(1, parseInt($('bundleItemQty').value) || 1);
+    if(!itemName) return alert('Select an existing item from the list.');
+
+    const match = findItemByName(itemName);
+    if(!match) {
+      if(!confirm(`"${itemName}" is not currently in Existing Goods. Do you still want to include it?`)) return;
+    }
+
+    const exist = currentBundleItems.find(x => x.name.toLowerCase() === itemName.toLowerCase());
+    if(exist){
+      exist.qty += qty;
+    } else {
+      currentBundleItems.push({
+        id: match ? match.id : null,
+        name: match ? match.name : itemName,
+        qty: qty
+      });
+    }
+
+    $('bundleItemSelect').value = '';
+    $('bundleItemQty').value = '1';
+    playSound('beep');
+    renderBundleBuilder();
+  });
+
+  $('bundleForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const editId = $('bundleEditId').value;
+    const name = $('bundleName').value.trim();
+    const price = parseFloat($('bundlePrice').value);
+
+    if(!name || isNaN(price) || currentBundleItems.length === 0){
+      return alert('Please provide a bundle name, price, and at least one item.');
+    }
+
+    const bundleData = {
+      id: editId || uid(),
+      name,
+      price,
+      items: currentBundleItems.map(i=>({...i}))
+    };
+
+    if(editId){
+      const idx = bundles.findIndex(b => b.id === editId);
+      if(idx >= 0) bundles[idx] = bundleData;
+    } else {
+      bundles.push(bundleData);
+    }
+
+    saveBundles();
+    resetBundleForm();
+    playSound('success');
+    renderBundles();
+    renderItemList();
+  });
+
+  function startEditBundle(id){
+    const b = bundles.find(x => x.id === id);
+    if(!b) return;
+    $('bundleEditId').value = b.id;
+    $('bundleName').value = b.name;
+    $('bundlePrice').value = b.price;
+    currentBundleItems = (b.items || []).map(i => ({...i}));
+    $('bundleFormTitle').textContent = 'Edit Bundle — ' + b.name;
+    $('saveBundleBtn').textContent = 'Save Changes';
+    $('cancelBundleEdit').style.display = 'inline-block';
+    renderBundleBuilder();
+    $('bundleName').focus();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function resetBundleForm(){
+    $('bundleForm').reset();
+    $('bundleEditId').value = '';
+    currentBundleItems = [];
+    $('bundleFormTitle').textContent = 'Create / Edit Product Bundle';
+    $('saveBundleBtn').textContent = 'Save Bundle';
+    $('cancelBundleEdit').style.display = 'none';
+    renderBundleBuilder();
+  }
+  $('cancelBundleEdit').addEventListener('click', resetBundleForm);
+
+  function deleteBundle(id){
+    if(!confirm('Are you sure you want to delete this bundle?')) return;
+    bundles = bundles.filter(b => b.id !== id);
+    saveBundles();
+    playSound('delete');
+    renderBundles();
+    renderItemList();
+  }
+
+  function renderBundles(){
+    const w = $('bundleListWrap');
+    if(!w) return;
+    if(!bundles.length){
+      w.innerHTML = '<div class="empty-state">No bundles configured yet. Use the builder above.</div>';
+      return;
+    }
+
+    const rows = bundles.map(b => `
+      <tr>
+        <td><b>${escapeHtml(b.name)}</b></td>
+        <td>${escapeHtml((b.items||[]).map(i=>`${i.name} ×${i.qty}`).join(', '))}</td>
+        <td class="num">${money(b.price)}</td>
+        <td>
+          <button class="btn-edit-text" data-edit-bundle="${b.id}">Edit</button>
+          <button class="btn-danger-text" data-del-bundle="${b.id}">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+
+    w.innerHTML = `<table><thead><tr><th>Bundle Name</th><th>Included Products</th><th>Package Price</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+
+    w.querySelectorAll('[data-edit-bundle]').forEach(btn => btn.addEventListener('click', () => startEditBundle(btn.dataset.editBundle)));
+    w.querySelectorAll('[data-del-bundle]').forEach(btn => btn.addEventListener('click', () => deleteBundle(btn.dataset.delBundle)));
+  }
+
+  /* ---------------- CUSTOMERS & SEGMENTATION ---------------- */
+  function getCustomerSegment(customer, custSales){
+    const count = custSales.length;
+    const totalSpent = custSales.reduce((a,s)=>a+Number(s.total||0),0);
+    if(count >= 3 || totalSpent >= 150) return { key:'VIP', label:'⭐ VIP', class:'badge-growth-pos' };
+    if(count === 0) return { key:'New', label:'🔵 New', class:'badge-growth-pos' };
+
+    const latestDate = custSales.sort((a,b)=>b.date.localeCompare(a.date))[0].date;
+    const daysSince = (new Date().getTime() - new Date(latestDate).getTime()) / (1000 * 60 * 60 * 24);
+    if(daysSince > 45) return { key:'Inactive', label:'🔴 Inactive', class:'badge-growth-neg' };
+    return { key:'Active', label:'🟢 Active', class:'badge-growth-pos' };
+  }
+
+  $('custForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const editId = $('custEditId').value;
+    const data = {
+      name: $('custName').value.trim(),
+      mobile: $('custMobile').value.trim(),
+      address: $('custAddress').value.trim()
+    };
+    if(!data.name || !data.mobile) return;
+
+    if(editId){
+      const cust = customers.find(c=>c.id===editId);
+      if(cust) Object.assign(cust, data);
+    } else {
+      customers.push({ id: uid(), ...data });
+    }
+    saveCustomers();
+    resetCustForm();
+    playSound('success');
+    renderAll();
+  });
+
+  function startEditCust(id){
+    const cust = customers.find(c=>c.id===id);
+    if(!cust) return;
+    $('custEditId').value = cust.id;
+    $('custName').value = cust.name;
+    $('custMobile').value = cust.mobile;
+    $('custAddress').value = cust.address||'';
+    $('custFormTitle').textContent = 'Edit customer';
+    $('custSubmitBtn').textContent = 'Save changes';
+    $('custCancelEdit').style.display = 'inline-block';
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  function resetCustForm(){
+    $('custForm').reset();
+    $('custEditId').value = '';
+    $('custFormTitle').textContent = 'Add a customer';
+    $('custSubmitBtn').textContent = 'Add customer';
+    $('custCancelEdit').style.display = 'none';
+  }
+  $('custCancelEdit').addEventListener('click', resetCustForm);
+
+  function deleteCust(id){
+    if(!confirm('Delete this customer? This does not delete their past sales.')) return;
+    customers = customers.filter(c=>c.id!==id);
+    saveCustomers();
+    playSound('delete');
+    renderAll();
+  }
+
+  function customerStats(customer){
+    const name=String(customer.name||'').trim().toLowerCase();
+    const cs=sales.filter(s=>String(s.customer||'').trim().toLowerCase()===name);
+    const total=cs.reduce((a,s)=>a+Number(s.total||0),0);
+    const invoicePaid=cs.reduce((a,s)=>a+Math.min(Number(s.total||0),Number(s.paidAmount||0)),0);
+    const manualPaid=customerPayments.filter(x=>String(x.customerId)===String(customer.id)).reduce((a,x)=>a+Number(x.amount||0),0);
+    const paid=invoicePaid+manualPaid;
+    const debt=Math.max(0,total-paid);
+    return {sales:cs,total,paid,debt};
+  }
+
+  function renderCustTable(){
+    const wrap=$('custTableWrap');
+    if(!wrap) return;
+    if(!customers.length){
+      wrap.innerHTML='<div class="empty-state">No customers added yet. Use the form above or add orders.</div>';
+      return;
+    }
+
+    const term=String(customersSearchTerm||'').trim().toLowerCase();
+    const segFilter = $('custSegmentFilter') ? $('custSegmentFilter').value : '';
+
+    const filtered=customers.filter(c=>{
+      const st=customerStats(c);
+      const seg=getCustomerSegment(c, st.sales);
+      if(segFilter && seg.key !== segFilter) return false;
+      if(!term) return true;
+      return String(c.name||'').toLowerCase().includes(term) ||
+             String(c.mobile||'').toLowerCase().includes(term) ||
+             String(c.address||'').toLowerCase().includes(term);
+    });
+
+    if(!filtered.length){
+      wrap.innerHTML='<div class="empty-state">No customers match your filter or search.</div>';
+      return;
+    }
+
+    const rows=filtered.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''))).map(c=>{
+      const st=customerStats(c);
+      const seg=getCustomerSegment(c, st.sales);
+      return `<tr>
+        <td><b>${escapeHtml(c.name)}</b></td>
+        <td><span class="${seg.class}">${seg.label}</span></td>
+        <td class="num">${escapeHtml(c.mobile)}</td>
+        <td>${escapeHtml(c.address||'—')}</td>
+        <td class="num">${money(st.total)}</td>
+        <td class="num ${st.debt>0?'debt-pos':'debt-zero'}">${money(st.debt)}</td>
+        <td>
+          <button class="btn-edit-text" data-view-cust="${c.id}">View ledger</button>
+          <button class="btn-edit-text" data-edit-cust="${c.id}">Edit</button>
+          <button class="btn-danger-text" data-del-cust="${c.id}">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    wrap.innerHTML=`<table><thead><tr>
+      <th>Name</th><th>Segment</th><th>Mobile</th><th>Address</th><th>Total purchased</th><th>Debt</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+
+    wrap.querySelectorAll('[data-view-cust]').forEach(btn=>btn.addEventListener('click',()=>showCustomerLedger(btn.dataset.viewCust)));
+    wrap.querySelectorAll('[data-edit-cust]').forEach(btn=>btn.addEventListener('click',()=>startEditCust(btn.dataset.editCust)));
+    wrap.querySelectorAll('[data-del-cust]').forEach(btn=>btn.addEventListener('click',()=>deleteCust(btn.dataset.delCust)));
+  }
+
+  if($('custSegmentFilter')) $('custSegmentFilter').addEventListener('change', renderCustTable);
+
+  function showCustomerLedger(id){
+    const cust=customers.find(c=>c.id===id);
+    if(!cust) return;
+    selectedCustomerId=id;
+    const st=customerStats(cust);
+
+    $('customerLedgerTitle').textContent='Customer ledger — '+cust.name;
+    $('customerLedgerWrap').innerHTML=`
+      <div class="customer-summary">
+        <div class="card"><div class="k">Total purchased</div><div class="v">${money(st.total)}</div></div>
+        <div class="card"><div class="k">Paid</div><div class="v">${money(st.paid)}</div></div>
+        <div class="card"><div class="k">Outstanding debt</div><div class="v ${st.debt>0?'debt-pos':'debt-zero'}">${money(st.debt)}</div></div>
+        <div class="card"><div class="k">Invoices</div><div class="v">${st.sales.length}</div></div>
+      </div>
+      <div class="panel">
+        <h2>Customer purchases</h2>
+        ${st.sales.length?`<table><thead><tr><th>Date</th><th>Invoice total</th><th>Paid</th><th>Debt</th><th>Payment</th><th>Items</th></tr></thead><tbody>${
+          st.sales.slice().sort((a,b)=>String(b.date+b.id).localeCompare(String(a.date+a.id))).map(s=>`
+            <tr>
+              <td>${escapeHtml(s.date)}</td>
+              <td class="num">${money(s.total)}</td>
+              <td class="num">${money(Math.min(Number(s.total||0),Number(s.paidAmount||0)))}</td>
+              <td class="num ${Number(s.debt||0)>0?'debt-pos':'debt-zero'}">${money(Number(s.debt||0))}</td>
+              <td>${escapeHtml(s.paymentMethod||'—')}</td>
+              <td>${escapeHtml((s.items||[]).map(it=>it.itemName+' ×'+it.qty).join(', '))}</td>
+            </tr>`).join('')}</tbody></table>`:
+          '<div class="empty-state">No purchases recorded for this customer yet.</div>'}
+      </div>`;
+    $('customerLedgerPanel').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  /* ---------------- DAILY ORDERS & PACKING ---------------- */
+  function renderOrderCustomerList(){
+    const sel = $('orderCustomerSelect');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">Walk-in / New customer</option>' + (customers||[]).map(c=>`<option value="${c.id}">${escapeHtml(c.name)} · ${escapeHtml(c.mobile||'')}</option>`).join('');
+  }
+
+  if($('orderCustomerSelect')){
+    $('orderCustomerSelect').addEventListener('change', ()=>{
+      const c = customers.find(x => String(x.id) === String($('orderCustomerSelect').value));
+      if(c){
+        $('orderCustomerName').value = c.name || '';
+        $('orderCustomerPhone').value = c.mobile || '';
+        $('orderAddress').value = c.address || '';
+      }
+    });
+  }
+
+  $('orderCustomerName').addEventListener('input', (e)=>{
+    const val = e.target.value.trim().toLowerCase();
+    if(!val) return;
+    const match = customers.find(c => c.name.toLowerCase() === val);
+    if(match){
+      $('orderCustomerPhone').value = match.mobile || '';
+      $('orderAddress').value = match.address || '';
+      if($('orderCustomerSelect')) $('orderCustomerSelect').value = match.id;
+    }
+  });
+
+  $('dailyOrderForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const id = $('orderEditId').value;
+    const custName = $('orderCustomerName').value.trim();
+    const custPhone = $('orderCustomerPhone').value.trim();
+    const address = $('orderAddress').value.trim();
+    const details = $('orderDetails').value.trim();
+
+    if(!custName || !custPhone || !address || !details){
+      return alert('Please fill in customer name, phone, address and order details.');
+    }
+
+    let customerRecord = findCustomerByPhone(custPhone) || findCustomerByName(custName);
+    if(!customerRecord){
+      customerRecord = {
+        id: uid(),
+        name: custName,
+        mobile: custPhone,
+        address: address
+      };
+      customers.push(customerRecord);
+      saveCustomers();
+      renderCustomerDatalist();
+      renderCustTable();
+    } else {
+      if(!customerRecord.address && address){
+        customerRecord.address = address;
+        saveCustomers();
+        renderCustTable();
+      }
+    }
+
+    const orderData = {
+      id: id || uid(),
+      date: $('orderDate').value || todayStr(),
+      customerId: customerRecord ? customerRecord.id : null,
+      customerName: custName,
+      phone: custPhone,
+      address: address,
+      details: details,
+      saleTotal: Number($('orderSaleTotal').value) || 0,
+      status: $('orderStatus').value,
+      deliveryPartner: $('orderDeliveryPartner').value.trim(),
+      trackingNumber: $('orderTrackingNumber').value.trim(),
+      deliveryFee: Number($('orderDeliveryFee').value) || 0,
+      expectedDelivery: $('orderExpectedDelivery').value || ''
+    };
+
+    if(id){
+      const o = dailyOrders.find(x => String(x.id) === String(id));
+      if(o) Object.assign(o, orderData);
+    } else {
+      dailyOrders.push(orderData);
+    }
+
+    saveDailyOrders();
+    $('dailyOrderForm').reset();
+    $('orderDate').value = todayStr();
+    $('orderStatus').value = 'جاهز';
+    $('orderDeliveryFee').value = '0';
+    $('orderEditId').value = '';
+    $('cancelOrderEdit').style.display = 'none';
+    $('orderFormTitle').textContent = 'Add daily order';
+    $('orderSubmitBtn').textContent = 'Add order';
+    playSound('success');
+    renderDailyOrders();
+    renderDashboard();
+    renderPackingChecklist();
+  });
+
+  function filteredDailyOrders(){
+    const q = String(window.dailyOrdersSearchTerm||'').toLowerCase();
+    const st = $('ordersStatusFilter') ? $('ordersStatusFilter').value : '';
+    const dt = $('ordersDateFilter') ? $('ordersDateFilter').value : '';
+    return (dailyOrders||[]).filter(o =>
+      (!st || o.status === st) &&
+      (!dt || o.date === dt) &&
+      (!q || [o.customerName, o.phone, o.address, o.details, o.status, o.deliveryPartner, o.trackingNumber, o.date].join(' ').toLowerCase().includes(q))
+    );
+  }
+
+  function renderOrdersKanban(){
+    const w = $('ordersKanbanWrap');
+    if(!w) return;
+    const sts = ['جاهز','قيد التجهيز','في الشركة','تم التسليم'];
+    w.innerHTML = sts.map(st=>{
+      const a = filteredDailyOrders().filter(o => o.status === st);
+      return `<div style="background:#F8FCFB;border:1px solid var(--line);border-radius:12px;padding:10px;min-height:180px">
+        <strong>${st} (${a.length})</strong>
+        ${a.map(o => `
+          <div style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:8px">
+            <b>${escapeHtml(o.customerName)}</b>
+            <div style="font-size:11px;color:#647271;margin:4px 0;">${escapeHtml(o.details)}</div>
+            <div style="font-size:10.5px;color:var(--petcy-teal-dark);margin-bottom:6px;">${escapeHtml(o.phone)}</div>
+            <select class="cart-input" data-kanban-status="${o.id}">
+              <option ${o.status==='جاهز'?'selected':''}>جاهز</option>
+              <option ${o.status==='قيد التجهيز'?'selected':''}>قيد التجهيز</option>
+              <option ${o.status==='في الشركة'?'selected':''}>في الشركة</option>
+              <option ${o.status==='تم التسليم'?'selected':''}>تم التسليم</option>
+            </select>
+          </div>
+        `).join('')}
+      </div>`;
+    }).join('');
+
+    w.querySelectorAll('[data-kanban-status]').forEach(x => {
+      x.addEventListener('change', () => {
+        const o = dailyOrders.find(y => String(y.id) === String(x.dataset.kanbanStatus));
+        if(o){ 
+          o.status = x.value; 
+          saveDailyOrders(); 
+          playSound('beep');
+          renderDailyOrders(); 
+        }
+      });
+    });
+  }
+
+  function renderDailyOrders(){
+    const wrap = $('dailyOrdersWrap');
+    if(!wrap) return;
+    const a = filteredDailyOrders();
+    if(!a.length){
+      wrap.innerHTML = '<div class="empty-state">No orders found.</div>';
+      renderOrdersKanban();
+      return;
+    }
+    const rows = a.slice().sort((x,y)=>String(y.date+y.id).localeCompare(String(x.date+x.id))).map(o => `
+      <tr>
+        <td>${escapeHtml(o.date)}</td>
+        <td><b>${escapeHtml(o.customerName)}</b></td>
+        <td>${escapeHtml(o.phone)}</td>
+        <td>${escapeHtml(o.address)}</td>
+        <td>${escapeHtml(o.details)}</td>
+        <td class="num">${money(o.saleTotal||0)}</td>
+        <td class="num">${money(o.deliveryFee||0)}</td>
+        <td>${escapeHtml(o.deliveryPartner||'—')}</td>
+        <td>${escapeHtml(o.trackingNumber||'—')}</td>
+        <td>${escapeHtml(o.expectedDelivery||'—')}</td>
+        <td>
+          <select class="cart-input" data-order-status="${o.id}">
+            <option ${o.status==='جاهز'?'selected':''}>جاهز</option>
+            <option ${o.status==='قيد التجهيز'?'selected':''}>قيد التجهيز</option>
+            <option ${o.status==='في الشركة'?'selected':''}>في الشركة</option>
+            <option ${o.status==='تم التسليم'?'selected':''}>تم التسليم</option>
+          </select>
+        </td>
+        <td>
+          <button class="btn-edit-text" data-edit-order="${o.id}">Edit</button>
+          <button class="btn-danger-text" data-del-order="${o.id}">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+
+    wrap.innerHTML = `<table><thead><tr>
+      <th>Date</th><th>Customer</th><th>Phone</th><th>Address</th><th>Details</th><th>Order total</th><th>Delivery</th><th>Company</th><th>Tracking</th><th>ETA</th><th>Status</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+
+    wrap.querySelectorAll('[data-order-status]').forEach(x => {
+      x.addEventListener('change', () => {
+        const o = dailyOrders.find(y => String(y.id) === String(x.dataset.orderStatus));
+        if(o){ 
+          o.status = x.value; 
+          saveDailyOrders(); 
+          playSound('beep');
+          renderDailyOrders(); 
+        }
+      });
+    });
+
+    wrap.querySelectorAll('[data-edit-order]').forEach(b => {
+      b.addEventListener('click', () => {
+        const o = dailyOrders.find(x => String(x.id) === String(b.dataset.editOrder));
+        if(!o) return;
+        $('orderEditId').value = o.id;
+        $('orderCustomerSelect').value = o.customerId || '';
+        $('orderCustomerName').value = o.customerName || '';
+        $('orderCustomerPhone').value = o.phone || '';
+        $('orderAddress').value = o.address || '';
+        $('orderDetails').value = o.details || '';
+        $('orderDate').value = o.date || todayStr();
+        $('orderSaleTotal').value = o.saleTotal || 0;
+        $('orderDeliveryPartner').value = o.deliveryPartner || '';
+        $('orderTrackingNumber').value = o.trackingNumber || '';
+        $('orderDeliveryFee').value = o.deliveryFee || 0;
+        $('orderExpectedDelivery').value = o.expectedDelivery || '';
+        $('orderStatus').value = o.status || 'جاهز';
+        $('orderFormTitle').textContent = 'Edit daily order';
+        $('orderSubmitBtn').textContent = 'Save changes';
+        $('cancelOrderEdit').style.display = 'inline-block';
+        window.scrollTo({top:0, behavior:'smooth'});
+      });
+    });
+
+    wrap.querySelectorAll('[data-del-order]').forEach(b => {
+      b.addEventListener('click', () => {
+        if(confirm('Delete this order?')){
+          dailyOrders = dailyOrders.filter(x => String(x.id) !== String(b.dataset.delOrder));
+          saveDailyOrders();
+          playSound('delete');
+          renderDailyOrders();
+          renderDashboard();
+          renderPackingChecklist();
+        }
+      });
+    });
+
+    renderOrdersKanban();
+  }
+
+  $('cancelOrderEdit').addEventListener('click', ()=>{
+    $('dailyOrderForm').reset();
+    $('orderDate').value = todayStr();
+    $('orderStatus').value = 'جاهز';
+    $('orderDeliveryFee').value = '0';
+    $('orderEditId').value = '';
+    $('orderFormTitle').textContent = 'Add daily order';
+    $('orderSubmitBtn').textContent = 'Add order';
+    $('cancelOrderEdit').style.display = 'none';
+  });
+
+  /* ---------------- PACKING & QUALITY CHECKLIST ---------------- */
+  $('openPackingSlipBtn').addEventListener('click', ()=>{
+    const p = $('packingChecklistPanel');
+    p.style.display = (p.style.display === 'none' || !p.style.display) ? 'block' : 'none';
+    if(p.style.display === 'block'){
+      renderPackingChecklist();
+      p.scrollIntoView({behavior:'smooth'});
+    }
+  });
+
+  function renderPackingChecklist(){
+    const wrap = $('packingListWrap');
+    if(!wrap) return;
+    const activeOrders = (dailyOrders||[]).filter(o => o.status === 'قيد التجهيز' || o.status === 'جاهز');
+    if(!activeOrders.length){
+      wrap.innerHTML = '<div class="empty-state">No orders currently in "Ready" or "Preparing" queue.</div>';
+      return;
+    }
+
+    wrap.innerHTML = activeOrders.map(o => {
+      const items = (o.details || '').split(',').map(s=>s.trim()).filter(Boolean);
+      return `
+        <div class="packing-card">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+            <div>
+              <b style="font-size:15px;">${escapeHtml(o.customerName)}</b> · <span style="color:var(--petcy-gray);">${escapeHtml(o.phone)}</span>
+              <div style="font-size:11.5px;color:var(--petcy-gray);margin-top:2px;">📍 ${escapeHtml(o.address)}</div>
+            </div>
+            <div style="text-align:right;">
+              <span class="tag sale">${escapeHtml(o.status)}</span>
+              <div style="font-weight:700;margin-top:4px;">${money(o.saleTotal)}</div>
+            </div>
+          </div>
+          <div style="background:var(--petcy-paper);border-radius:8px;padding:8px 12px;margin-top:8px;">
+            <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--petcy-gray);margin-bottom:6px;font-weight:700;">Items to Pack &amp; Inspect:</div>
+            ${items.map((it, idx)=>`
+              <label class="packing-item-row">
+                <input type="checkbox" id="chk-${o.id}-${idx}">
+                <span>${escapeHtml(it)}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    wrap.querySelectorAll('input[type="checkbox"]').forEach(c => {
+      c.addEventListener('change', () => playSound('beep'));
+    });
+  }
+
+  $('printPackingSlipBtn').addEventListener('click', ()=>{
+    const activeOrders = (dailyOrders||[]).filter(o => o.status === 'قيد التجهيز' || o.status === 'جاهز');
+    if(!activeOrders.length) return alert('No orders in preparation to print.');
+    const w = window.open('','_blank','width=800,height=900');
+    const content = activeOrders.map(o => `
+      <div style="border-bottom:2px dashed #999;padding:14px 0;margin-bottom:14px;">
+        <h3 style="margin:0;">Order for: ${escapeHtml(o.customerName)} (${escapeHtml(o.phone)})</h3>
+        <p style="margin:4px 0;font-size:12px;">Address: ${escapeHtml(o.address)} | Date: ${escapeHtml(o.date)} | Total: ${money(o.saleTotal)}</p>
+        <p><b>Items:</b> ${escapeHtml(o.details)}</p>
+        <p style="font-size:11px;">[  ] Inspected &amp; Packed &nbsp;&nbsp;&nbsp;&nbsp; [  ] Sealed &nbsp;&nbsp;&nbsp;&nbsp; Quality Sign: ____________</p>
+      </div>
+    `).join('');
+    w.document.write(`<html><head><title>Packing Slips - ${todayStr()}</title><style>body{font-family:Arial;padding:20px;line-height:1.4;}</style></head><body><h1>🐾 Petcy - Packing &amp; Picking List</h1><p>Date: ${todayStr()} | Total Orders: ${activeOrders.length}</p>${content}<script>window.print()<\/script></body></html>`);
+    w.document.close();
+  });
+
+  if($('ordersSearch')) $('ordersSearch').addEventListener('input', (e)=>{ window.dailyOrdersSearchTerm = e.target.value; renderDailyOrders(); });
+  if($('ordersStatusFilter')) $('ordersStatusFilter').addEventListener('change', renderDailyOrders);
+  if($('ordersDateFilter')) $('ordersDateFilter').addEventListener('change', renderDailyOrders);
+
+  /* ---------------- SALES ---------------- */
+  let cart = [];
+  let editingSaleId = null;
+  let editingSaleOriginalItems = null;
+
+  $('saleDate').value = todayStr();
+
+  function calcSaleDiscount(base,type,value){
+    const v=Math.max(0,Number(value)||0);
+    if(type==='percent') return Math.min(base, base*v/100);
+    if(type==='fixed') return Math.min(base,v);
+    return 0;
+  }
+
+  function calcCartSummary(){
+    const itemDetails = cart.map(c=>{
+      const gross=Number(c.qty)*Number(c.price);
+      const itemDiscount=calcSaleDiscount(gross,c.discountType||'none',c.discountValue||0);
+      const net=gross-itemDiscount;
+      const cost=(c.cost!=null && !isNaN(Number(c.cost))) ? Number(c.cost)*Number(c.qty) : null;
+      const profit=cost!=null ? net-cost : null;
+      return {gross,itemDiscount,net,cost,profit};
+    });
+    const subtotal=itemDetails.reduce((s,x)=>s+x.gross,0);
+    const itemDiscountTotal=itemDetails.reduce((s,x)=>s+x.itemDiscount,0);
+    const afterItemDiscount=subtotal-itemDiscountTotal;
+    const invoiceDiscount=calcSaleDiscount(afterItemDiscount,$('saleDiscountType') ? $('saleDiscountType').value : 'none',$('saleDiscountValue') ? $('saleDiscountValue').value : 0);
+    const total=Math.max(0,afterItemDiscount-invoiceDiscount);
+    const paid=Math.max(0,Number($('salePaidAmount') ? $('salePaidAmount').value : 0)||0);
+    const debt=Math.max(0,total-paid);
+    const costTotal=itemDetails.reduce((s,x)=>s+(x.cost==null?0:x.cost),0);
+    const profit=itemDetails.reduce((s,x)=>s+(x.profit==null?0:x.profit),0)-invoiceDiscount;
+    return {itemDetails,subtotal,itemDiscountTotal,afterItemDiscount,invoiceDiscount,total,paid,debt,costTotal,profit};
+  }
+
+  function renderCart(){
+    const wrap=$('cartWrap');
+    if(cart.length===0){
+      wrap.innerHTML='<div class="empty-state" style="padding:16px;">No items added to this sale yet — add one above.</div>';
+      updateCartTotal();
+      return;
+    }
+
+    const rows=cart.map((c,idx)=>{
+      const gross=Number(c.qty)*Number(c.price);
+      const disc=calcSaleDiscount(gross,c.discountType||'none',c.discountValue||0);
+      const net=gross-disc;
+      const cost=c.cost!=null&&!isNaN(Number(c.cost))?Number(c.cost)*Number(c.qty):null;
+      const profit=cost==null?null:net-cost;
+
+      return `<tr>
+        <td>${escapeHtml(c.itemName)}</td>
+        <td class="num"><input class="cart-input" type="number" min="1" step="1" value="${c.qty}" data-cart-qty="${idx}"></td>
+        <td class="num"><input class="cart-input" type="number" min="0" step="any" value="${c.price}" data-cart-price="${idx}"></td>
+        <td class="num"><input class="cart-input" type="number" min="0" step="any" value="${c.cost!=null?c.cost:''}" data-cart-cost="${idx}" placeholder="—"></td>
+        <td><select class="cart-input" data-cart-disc-type="${idx}"><option value="none"${c.discountType==='none'||!c.discountType?' selected':''}>—</option><option value="percent"${c.discountType==='percent'?' selected':''}>%</option><option value="fixed"${c.discountType==='fixed'?' selected':''}>Fixed</option></select></td>
+        <td class="num"><input class="cart-input" type="number" min="0" step="any" value="${c.discountValue||0}" data-cart-disc-value="${idx}"></td>
+        <td class="num ${profit!=null&&profit<0?'profit-neg':'profit-pos'}" data-cart-profit="${idx}">${profit!=null?money(profit):'—'}</td>
+        <td class="num" data-cart-subtotal="${idx}">${money(net)}</td>
+        <td><button type="button" class="btn-danger-text" data-cart-remove="${idx}">Remove</button></td>
+      </tr>`;
+    }).join('');
+
+    wrap.innerHTML=`<table><thead><tr>
+      <th>Item</th><th>Qty</th><th>Unit price</th><th>Cost price</th><th>Item discount</th><th>Value</th><th>Profit</th><th>Net</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+
+    wrap.querySelectorAll('[data-cart-qty]').forEach(inp=>inp.addEventListener('input',()=>{cart[+inp.dataset.cartQty].qty=Math.max(0,parseFloat(inp.value)||0);updateCartRow(+inp.dataset.cartQty);}));
+    wrap.querySelectorAll('[data-cart-price]').forEach(inp=>inp.addEventListener('input',()=>{cart[+inp.dataset.cartPrice].price=Math.max(0,parseFloat(inp.value)||0);updateCartRow(+inp.dataset.cartPrice);}));
+    wrap.querySelectorAll('[data-cart-cost]').forEach(inp=>inp.addEventListener('input',()=>{cart[+inp.dataset.cartCost].cost=inp.value===''?null:Math.max(0,parseFloat(inp.value)||0);updateCartRow(+inp.dataset.cartCost);}));
+    wrap.querySelectorAll('[data-cart-disc-type]').forEach(inp=>inp.addEventListener('change',()=>{cart[+inp.dataset.cartDiscType].discountType=inp.value;updateCartRow(+inp.dataset.cartDiscType);}));
+    wrap.querySelectorAll('[data-cart-disc-value]').forEach(inp=>inp.addEventListener('input',()=>{cart[+inp.dataset.cartDiscValue].discountValue=Math.max(0,parseFloat(inp.value)||0);updateCartRow(+inp.dataset.cartDiscValue);}));
+    wrap.querySelectorAll('[data-cart-remove]').forEach(btn=>btn.addEventListener('click',()=>{cart.splice(+btn.dataset.cartRemove,1);playSound('delete');renderCart();}));
+    updateCartTotal();
+  }
+
+  function updateCartRow(idx){
+    const c=cart[idx];
+    const gross=Number(c.qty)*Number(c.price);
+    const disc=calcSaleDiscount(gross,c.discountType||'none',c.discountValue||0);
+    const net=gross-disc;
+    const cost=c.cost!=null&&!isNaN(Number(c.cost))?Number(c.cost)*Number(c.qty):null;
+    const profit=cost==null?null:net-cost;
+    const sub=document.querySelector(`[data-cart-subtotal="${idx}"]`);
+    const pc=document.querySelector(`[data-cart-profit="${idx}"]`);
+    if(sub) sub.textContent=money(net);
+    if(pc){pc.textContent=profit!=null?money(profit):'—';pc.className='num '+(profit!=null&&profit<0?'profit-neg':'profit-pos');}
+    updateCartTotal();
+  }
+
+  function updateCartTotal(){
+    const summary=calcCartSummary();
+    $('saleSubtotal').textContent=money(summary.subtotal);
+    $('saleDiscountAmount').textContent=money(summary.itemDiscountTotal+summary.invoiceDiscount);
+    $('cartTotal').textContent=money(summary.total);
+    $('saleDebtPreview').textContent=money(summary.debt);
+  }
+
+  $('addCartItemBtn').addEventListener('click', ()=>{
+    const name = $('saleItemInput').value.trim();
+    const qty = parseFloat($('saleQtyInput').value);
+    const price = parseFloat($('salePriceInput').value);
+    const costRaw = $('saleCostInput').value;
+    if(!name || !qty || isNaN(price)){
+      alert('Enter an item, a quantity, and a unit price before adding it to the sale.');
+      return;
+    }
+
+    const bundleMatch = findBundleByName(name);
+    const match = findItemByName(name);
+    
+    let cost = null;
+    let isBundle = false;
+
+    if(bundleMatch){
+      isBundle = true;
+      cost = costRaw !== '' ? Math.max(0, parseFloat(costRaw)||0) : bundleMatch.items.reduce((sum, bi)=>{
+        const it = findItemByName(bi.name);
+        return sum + (it ? Number(it.cost || 0) * Number(bi.qty || 1) : 0);
+      }, 0);
+    } else {
+      cost = costRaw !== '' ? Math.max(0, parseFloat(costRaw)||0) : (match ? match.cost : null);
+    }
+
+    cart.push({
+      itemId: match ? match.id : null,
+      bundleId: bundleMatch ? bundleMatch.id : null,
+      isBundle: isBundle,
+      bundleItems: bundleMatch ? (bundleMatch.items||[]).map(x=>({...x})) : null,
+      itemName: isBundle ? `[Bundle] ${bundleMatch.name}` : (match ? match.name : name),
+      qty, price, cost
+    });
+
+    $('saleItemInput').value = '';
+    $('saleQtyInput').value = '1';
+    $('salePriceInput').value = '';
+    $('saleCostInput').value = '';
+    playSound('beep');
+    renderCart();
+    $('saleItemInput').focus();
+  });
+
+  $('saleItemInput').addEventListener('change', ()=>{
+    const val = $('saleItemInput').value.trim();
+    const bundleMatch = findBundleByName(val);
+    if(bundleMatch){
+      $('salePriceInput').value = bundleMatch.price || '';
+      const totalBundleCost = bundleMatch.items.reduce((sum, bi)=>{
+        const it = findItemByName(bi.name);
+        return sum + (it ? Number(it.cost || 0) * Number(bi.qty || 1) : 0);
+      }, 0);
+      $('saleCostInput').value = totalBundleCost > 0 ? totalBundleCost : '';
+      return;
+    }
+
+    const match = findItemByName(val);
+    if(match){
+      $('salePriceInput').value = match.price;
+      $('saleCostInput').value = match.cost;
+    }
+  });
+
+  function reverseStockEffect(itemsList){
+    (itemsList||[]).forEach(it=>{
+      if(it.isBundle && it.bundleItems){
+        it.bundleItems.forEach(bi=>{
+          const inv = findItemByName(bi.name);
+          if(inv) inv.qty += (Number(bi.qty || 1) * Number(it.qty || 1));
+        });
+      } else if(it.itemId){
+        const inv = inventory.find(i=>i.id===it.itemId);
+        if(inv) inv.qty += Number(it.qty || 0);
+      }
+    });
+  }
+
+  function applyStockEffect(itemsList, refId, refDate){
+    itemsList.forEach(it=>{
+      if(it.isBundle && it.bundleItems){
+        it.bundleItems.forEach(bi=>{
+          const inv = findItemByName(bi.name);
+          if(inv){
+            const deduct = Number(bi.qty || 1) * Number(it.qty || 1);
+            inv.qty = Math.max(0, inv.qty - deduct);
+            stockMovements.push({
+              id: uid(),
+              date: refDate || todayStr(),
+              type: 'sale (bundle)',
+              itemId: inv.id,
+              itemName: inv.name,
+              qty: -deduct,
+              reference: refId || 'sale'
+            });
+          }
+        });
+      } else if(it.itemId){
+        const inv = inventory.find(i=>i.id===it.itemId);
+        if(inv){
+          inv.qty = Math.max(0, inv.qty - Number(it.qty || 0));
+          stockMovements.push({
+            id: uid(),
+            date: refDate || todayStr(),
+            type: 'sale',
+            itemId: inv.id,
+            itemName: inv.name,
+            qty: -Number(it.qty || 0),
+            reference: refId || 'sale'
+          });
+        }
+      }
+    });
+  }
+
+  $('completeSaleBtn').addEventListener('click', ()=>{
+    if(cart.length===0){ alert('Add at least one item to the sale first.'); return; }
+
+    if(editingSaleId && editingSaleOriginalItems){
+      reverseStockEffect(editingSaleOriginalItems);
+    }
+
+    const saleDateVal = $('saleDate').value || todayStr();
+    const thisSaleId = editingSaleId || uid();
+
+    applyStockEffect(cart, thisSaleId, saleDateVal);
+    saveInventory();
+    saveStockMovements();
+
+    // Deduct usage if a promo code was applied
+    if(appliedCoupon && !editingSaleId){
+      const cIdx = coupons.findIndex(x => x.id === appliedCoupon.id);
+      if(cIdx >= 0){
+        coupons[cIdx].usedCount = (coupons[cIdx].usedCount || 0) + 1;
+        saveCoupons();
+      }
+    }
+
+    const summary = calcCartSummary();
+    const record = {
+      id: thisSaleId,
+      date: saleDateVal,
+      customer: $('saleCustomer').value.trim(),
+      items: cart.map(c=>({...c})),
+      subtotal: summary.subtotal,
+      itemDiscountAmount: summary.itemDiscountTotal,
+      discountType: $('saleDiscountType').value,
+      discountValue: Number($('saleDiscountValue').value)||0,
+      discountAmount: summary.invoiceDiscount,
+      total: summary.total,
+      paidAmount: Math.min(summary.total, summary.paid),
+      debt: summary.debt,
+      paymentMethod: $('salePaymentMethod').value,
+      costTotal: summary.costTotal,
+      profit: summary.profit
+    };
+
+    if(editingSaleId){
+      const idx = sales.findIndex(s=>s.id===editingSaleId);
+      if(idx>=0) sales[idx] = record; else sales.push(record);
+    } else {
+      sales.push(record);
+    }
+    saveSales();
+    playSound('cash');
+    resetSaleForm();
+    renderAll();
+  });
+
+  function resetSaleForm(){
+    cart = [];
+    editingSaleId = null;
+    editingSaleOriginalItems = null;
+    appliedCoupon = null;
+    $('saleDate').value = todayStr();
+    $('saleCustomer').value = '';
+    $('salePromoCodeInput').value = '';
+    $('saleItemInput').value = '';
+    $('saleQtyInput').value = '1';
+    $('salePriceInput').value = '';
+    $('saleCostInput').value = '';
+    $('saleDiscountType').value = 'none';
+    $('saleDiscountValue').value = '0';
+    $('saleFormTitle').textContent = 'Record a sale';
+    $('completeSaleBtn').textContent = 'Complete sale';
+    $('cancelSaleEdit').style.display = 'none';
+    renderCart();
+  }
+
+  $('cancelSaleEdit').addEventListener('click', resetSaleForm);
+
+  function startEditSale(id){
+    const sale = sales.find(s=>s.id===id);
+    if(!sale) return;
+    editingSaleId = sale.id;
+    editingSaleOriginalItems = (sale.items||[]).map(it=>({...it}));
+    cart = (sale.items||[]).map(it=>({...it,discountType:it.discountType||'none',discountValue:Number(it.discountValue)||0}));
+    $('saleDate').value = sale.date;
+    $('saleCustomer').value = sale.customer || '';
+    $('saleDiscountType').value = sale.discountType || 'none';
+    $('saleDiscountValue').value = sale.discountValue || 0;
+    $('salePaidAmount').value = sale.paidAmount || 0;
+    $('salePaymentMethod').value = sale.paymentMethod || 'Cash';
+    $('saleFormTitle').textContent = 'Edit sale';
+    $('completeSaleBtn').textContent = 'Save changes';
+    $('cancelSaleEdit').style.display = 'inline-block';
+    renderCart();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function deleteSale(id){
+    const rec = sales.find(s=>s.id===id);
+    if(!rec) return;
+    if(!confirm('Delete this sale? Quantities will be added back to inventory.')) return;
+    reverseStockEffect(rec.items);
+    saveInventory();
+    sales = sales.filter(s=>s.id!==id);
+    saveSales();
+    playSound('delete');
+    renderAll();
+  }
+
+  function renderSalesTable(){
+    const wrap = $('salesTableWrap');
+    if(sales.length===0){ wrap.innerHTML='<div class="empty-state">No sales recorded yet.</div>'; return; }
+
+    const term=String(salesSearchTerm||'').trim().toLowerCase();
+    const filtered=sales.filter(s=>{
+      if(!term) return true;
+      if(String(s.date||'').toLowerCase().includes(term)) return true;
+      if(String(s.customer||'').toLowerCase().includes(term)) return true;
+      return (s.items||[]).some(it=>String(it.itemName||'').toLowerCase().includes(term));
+    });
+    if(!filtered.length){ wrap.innerHTML='<div class="empty-state">No sales match your search.</div>'; return; }
+
+    const sorted=filtered.slice().sort((a,b)=>String(b.date+b.id).localeCompare(String(a.date+a.id)));
+
+    wrap.innerHTML=sorted.map(s=>{
+      const items=s.items||[];
+      const subtotal=items.reduce((a,it)=>a+Number(it.qty)*Number(it.price),0);
+      const itemDiscount=items.reduce((a,it)=>a+calcSaleDiscount(Number(it.qty)*Number(it.price),it.discountType||'none',it.discountValue||0),0);
+      const invoiceDiscount=Number(s.discountAmount!=null?s.discountAmount:calcSaleDiscount(subtotal-itemDiscount,s.discountType||'none',s.discountValue||0));
+      const total=Number(s.total||0);
+      const paid=Number(s.paidAmount||0);
+      const debt=Math.max(0,total-paid);
+      let profit=0,unknown=false;
+
+      const rows=items.map(it=>{
+        const gross=Number(it.qty)*Number(it.price);
+        const d=calcSaleDiscount(gross,it.discountType||'none',it.discountValue||0);
+        const net=gross-d;
+        const cost=it.cost!=null&&!isNaN(Number(it.cost))?Number(it.cost)*Number(it.qty):null;
+        if(cost==null) unknown=true;
+        const p=cost==null?null:net-cost;
+        if(p!=null) profit+=p;
+        return `<tr>
+          <td>${escapeHtml(it.itemName)}</td>
+          <td class="num">${it.qty}</td>
+          <td class="num">${money(it.price)}</td>
+          <td class="num">${it.cost!=null?money(it.cost):'—'}</td>
+          <td class="num">${it.discountType==='percent'?it.discountValue+'%':it.discountType==='fixed'?money(it.discountValue):'—'}</td>
+          <td class="num ${p!=null&&p<0?'profit-neg':'profit-pos'}">${p!=null?money(p):'—'}</td>
+          <td class="num">${money(net)}</td>
+        </tr>`;
+      }).join('');
+
+      profit-=invoiceDiscount;
+      return `<div class="sale-card">
+        <div class="sale-card-head">
+          <div class="sale-card-meta">
+            <span class="sale-card-date">${escapeHtml(s.date)}</span>
+            <span class="sale-card-cust">${escapeHtml(s.customer||'Walk-in')}</span>
+          </div>
+          <div class="sale-card-actions">
+            <span class="sale-card-profit ${profit<0?'profit-neg':'profit-pos'}">Profit: ${money(profit)}${unknown?'*':''}</span>
+            <span class="sale-card-total">${money(total)}</span>
+            <button class="btn-edit-text" data-print-sale="${s.id}">Print</button><button class="btn-edit-text" data-edit-sale="${s.id}">Edit</button>
+            <button class="btn-danger-text" data-del-sale="${s.id}">Delete</button>
+          </div>
+        </div>
+        <table class="sale-items"><thead><tr>
+          <th>Item</th><th>Qty</th><th>Unit price</th><th>Cost price</th><th>Discount</th><th>Profit</th><th>Net</th>
+        </tr></thead><tbody>${rows}</tbody></table>
+        <div style="padding:7px 18px 10px;font-size:11px;color:#6b6f60;">
+          Invoice discount: ${money(invoiceDiscount)} · Paid: ${money(paid)} · Debt: <span class="${debt>0?'debt-pos':'debt-zero'}">${money(debt)}</span> · Payment: ${escapeHtml(s.paymentMethod||'—')}
+        </div>
+      </div>`;
+    }).join('');
+
+    wrap.querySelectorAll('[data-edit-sale]').forEach(b=>b.addEventListener('click',()=>startEditSale(b.dataset.editSale)));
+    wrap.querySelectorAll('[data-print-sale]').forEach(b=>b.addEventListener('click',()=>printSale(sales.find(x=>x.id===b.dataset.printSale))));
+    wrap.querySelectorAll('[data-del-sale]').forEach(b=>b.addEventListener('click',()=>deleteSale(b.dataset.delSale)));
+  }
+
+  function printSale(sale){
+    if(!sale)return;
+    const w=window.open('','_blank','width=800,height=900');
+    const items=(sale.items||[]).map(it=>`<tr><td>${escapeHtml(it.itemName)}</td><td>${it.qty}</td><td>${money(it.price)}</td><td>${money(Number(it.qty)*Number(it.price))}</td></tr>`).join('');
+    w.document.write(`<html><head><title>Invoice ${escapeHtml(sale.id)}</title><style>body{font-family:Arial;padding:30px;color:#111}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border-bottom:1px solid #ddd;padding:8px;text-align:left}.tot{margin-top:20px;text-align:right}</style></head><body><h1>Petcy</h1><div>Invoice: ${escapeHtml(sale.id)}</div><div>Date: ${escapeHtml(sale.date)}</div><div>Customer: ${escapeHtml(sale.customer||'Walk-in')}</div><table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>${items}</tbody></table><div class="tot"><p><strong>Total: ${money(sale.total)}</strong></p><p>Paid: ${money(sale.paidAmount||0)}</p><p>Debt: ${money(sale.debt||0)}</p></div><script>window.print()<\/script></body></html>`);
+    w.document.close();
+  }
+
+  /* ---------------- PURCHASES ---------------- */
+  $('purchDate').value = todayStr();
+  $('purchaseForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const name = $('purchItem').value.trim();
+    const qty = parseFloat($('purchQty').value);
+    const cost = parseFloat($('purchCost').value);
+    if(!name || !qty || cost==null || isNaN(cost)) return;
+
+    let match = findItemByName(name);
+    const record = {
+      id: uid(),
+      date: $('purchDate').value || todayStr(),
+      itemId: null,
+      itemName: match ? match.name : name,
+      qty, cost,
+      total: qty*cost,
+      supplier: $('purchSupplier').value.trim()
+    };
+
+    if(match){
+      const oldQty = Number(match.qty)||0;
+      const oldCost = Number(match.cost)||0;
+      const newQty = oldQty + qty;
+      match.cost = newQty > 0 ? ((oldQty*oldCost) + (qty*cost)) / newQty : cost;
+      match.qty = newQty;
+      stockMovements.push({id:uid(),date:record.date,type:'purchase',itemId:match.id,itemName:match.name,qty:Number(qty),reference:record.id});
+      record.itemId = match.id;
+      record.previousAverageCost = oldCost;
+      record.newAverageCost = match.cost;
+      saveInventory();
+      saveStockMovements();
+    } else {
+      const newItem = { id: uid(), name, barcode:'', category:'', qty, cost, price: 0, threshold: 5 };
+      inventory.push(newItem);
+      record.itemId = newItem.id;
+      saveInventory();
+    }
+    purchases.push(record);
+    savePurchases();
+    playSound('success');
+    $('purchaseForm').reset();
+    $('purchDate').value = todayStr();
+    renderAll();
+  });
+
+  function deletePurchase(id){
+    const rec = purchases.find(p=>p.id===id);
+    if(!rec) return;
+    if(!confirm('Delete this purchase record? Quantity will be adjusted.')) return;
+    if(rec.itemId){
+      const item = inventory.find(i=>i.id===rec.itemId);
+      if(item){ item.qty = Math.max(0, item.qty - rec.qty); saveInventory(); }
+    }
+    purchases = purchases.filter(p=>p.id!==id);
+    savePurchases();
+    playSound('delete');
+    renderAll();
+  }
+
+  function renderPurchTable(){
+    const wrap=$('purchTableWrap');
+    if(!wrap) return;
+    if(!purchases.length){wrap.innerHTML='<div class="empty-state">No purchases recorded yet.</div>';return;}
+
+    const term=String(purchasesSearchTerm||'').trim().toLowerCase();
+    const filtered=purchases.filter(p=>{
+      if(!term) return true;
+      return String(p.date||'').toLowerCase().includes(term) ||
+             String(p.itemName||'').toLowerCase().includes(term) ||
+             String(p.supplier||'').toLowerCase().includes(term);
+    });
+    if(!filtered.length){wrap.innerHTML='<div class="empty-state">No purchases match your search.</div>';return;}
+
+    const rows=filtered.slice().sort((a,b)=>String(b.date+b.id).localeCompare(String(a.date+a.id))).map(p=>`
+      <tr>
+        <td>${escapeHtml(p.date)}</td><td>${escapeHtml(p.itemName)}</td>
+        <td class="num">${p.qty}</td><td class="num">${money(p.cost)}</td>
+        <td class="num">${money(p.total)}</td><td>${escapeHtml(p.supplier||'—')}</td>
+        <td>${p.newAverageCost!=null?money(p.newAverageCost):'—'}</td>
+        <td><button class="btn-danger-text" data-del-purch="${p.id}">Delete</button></td>
+      </tr>`).join('');
+
+    wrap.innerHTML=`<table><thead><tr><th>Date</th><th>Item</th><th>Qty</th><th>Unit cost</th><th>Total</th><th>Supplier</th><th>Avg cost after</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+    wrap.querySelectorAll('[data-del-purch]').forEach(btn=>btn.addEventListener('click',()=>deletePurchase(btn.dataset.delPurch)));
+  }
+
+  /* ---------------- EXPENSES & REPORTS & MOM MATRIX ---------------- */
+  function renderExpensesTable(){
+    const wrap = $('expensesTableWrap');
+    if(!wrap) return;
+    const list = Array.isArray(expenses) ? expenses : [];
+    if(!list.length){ wrap.innerHTML='<div class="empty-state">No expenses recorded yet.</div>'; return; }
+
+    const rows=list.slice().reverse().map(e=>`
+      <tr>
+        <td>${escapeHtml(e.date||'')}</td>
+        <td>${escapeHtml(e.name||'')}</td>
+        <td>${escapeHtml(e.category||'General')}</td>
+        <td class="num">${money(Number(e.amount)||0)}</td>
+        <td>${escapeHtml(e.note||'—')}</td>
+        <td><button class="btn-danger-text" data-del-expense="${escapeHtml(e.id)}">Delete</button></td>
+      </tr>`).join('');
+
+    wrap.innerHTML=`<table><thead><tr><th>Date</th><th>Expense</th><th>Category</th><th>Amount</th><th>Note</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+    wrap.querySelectorAll('[data-del-expense]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        if(!confirm('Delete this expense?')) return;
+        expenses=expenses.filter(e=>String(e.id)!==String(btn.dataset.delExpense));
+        saveExpenses();
+        playSound('delete');
+        renderAll();
+      });
+    });
+  }
+
+  if($('expenseForm')){
+    $('expenseForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const name=$('expenseName').value.trim();
+      const amount=parseFloat($('expenseAmount').value);
+      if(!name || isNaN(amount) || amount<0) return;
+
+      expenses.push({
+        id: uid(),
+        date: $('expenseDate').value || todayStr(),
+        name,
+        amount,
+        category: $('expenseCategory').value || 'General',
+        note: $('expenseNote').value.trim()
+      });
+      saveExpenses();
+      playSound('success');
+      $('expenseForm').reset();
+      $('expenseDate').value = todayStr();
+      renderAll();
+    });
+  }
+
+  function getMonthFinancials(monthStr){
+    const ss = sales.filter(s=>String(s.date||'').slice(0,7)===monthStr);
+    const pp = purchases.filter(p=>String(p.date||'').slice(0,7)===monthStr);
+    const ee = (expenses||[]).filter(e=>String(e.date||'').slice(0,7)===monthStr);
+
+    const salesTotal = ss.reduce((a,x)=>a+(Number(x.total)||0),0);
+    const purchasesTotal = pp.reduce((a,x)=>a+(Number(x.total)||0),0);
+    const expensesTotal = ee.reduce((a,x)=>a+(Number(x.amount)||0),0);
+    const grossProfit = ss.reduce((sum,s)=>sum+(s.items||[]).reduce((x,it)=>{
+      if(it.cost==null || isNaN(Number(it.cost))) return x;
+      return x+(Number(it.price)-Number(it.cost))*Number(it.qty);
+    },0),0);
+    const netProfit = grossProfit - expensesTotal;
+
+    return { month: monthStr, salesTotal, purchasesTotal, expensesTotal, grossProfit, netProfit, orderCount: ss.length };
+  }
+
+  function renderMoMMatrix(){
+    const cardsWrap = $('momGrowthCardsWrap');
+    const tableWrap = $('momTableWrap');
+    if(!cardsWrap || !tableWrap) return;
+
+    const allMonthsSet = new Set();
+    sales.forEach(s=>s.date && allMonthsSet.add(s.date.slice(0,7)));
+    expenses.forEach(e=>e.date && allMonthsSet.add(e.date.slice(0,7)));
+    purchases.forEach(p=>p.date && allMonthsSet.add(p.date.slice(0,7)));
+    allMonthsSet.add(todayStr().slice(0,7));
+
+    const sortedMonths = Array.from(allMonthsSet).sort().reverse();
+    const currM = sortedMonths[0] || todayStr().slice(0,7);
+    
+    const d = new Date(currM + '-01');
+    d.setMonth(d.getMonth() - 1);
+    const prevM = d.toISOString().slice(0,7);
+
+    const currData = getMonthFinancials(currM);
+    const prevData = getMonthFinancials(prevM);
+
+    const calcGrowth = (c, p) => {
+      if(!p && !c) return '0%';
+      if(!p) return '+100%';
+      const pct = ((c - p) / Math.abs(p)) * 100;
+      return (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+    };
+
+    const salesGrowth = calcGrowth(currData.salesTotal, prevData.salesTotal);
+    const profitGrowth = calcGrowth(currData.netProfit, prevData.netProfit);
+    const expGrowth = calcGrowth(currData.expensesTotal, prevData.expensesTotal);
+
+    cardsWrap.innerHTML = `
+      <div class="cards" style="margin-bottom:0;">
+        <div class="card">
+          <div class="k">This Month Sales (${currM})</div>
+          <div class="v">${money(currData.salesTotal)}</div>
+          <div style="margin-top:6px;"><span class="${salesGrowth.startsWith('+')?'badge-growth-pos':'badge-growth-neg'}">${salesGrowth} vs ${prevM}</span></div>
+        </div>
+        <div class="card">
+          <div class="k">This Month Net Profit</div>
+          <div class="v ${currData.netProfit>=0?'good':'alert'}">${money(currData.netProfit)}</div>
+          <div style="margin-top:6px;"><span class="${profitGrowth.startsWith('+')?'badge-growth-pos':'badge-growth-neg'}">${profitGrowth} vs ${prevM}</span></div>
+        </div>
+        <div class="card">
+          <div class="k">This Month Expenses</div>
+          <div class="v">${money(currData.expensesTotal)}</div>
+          <div style="margin-top:6px;"><span class="${expGrowth.startsWith('-')?'badge-growth-pos':'badge-growth-neg'}">${expGrowth} vs ${prevM}</span></div>
+        </div>
+      </div>
+    `;
+
+    const matrixRows = sortedMonths.map((m, idx)=>{
+      const mData = getMonthFinancials(m);
+      const prevMStr = sortedMonths[idx + 1] ? sortedMonths[idx + 1] : null;
+      const pData = prevMStr ? getMonthFinancials(prevMStr) : null;
+      const sGrowth = pData ? calcGrowth(mData.salesTotal, pData.salesTotal) : '—';
+      const pGrowth = pData ? calcGrowth(mData.netProfit, pData.netProfit) : '—';
+
+      return `<tr>
+        <td><b>${m}</b></td>
+        <td class="num">${money(mData.salesTotal)}</td>
+        <td><span class="${sGrowth.startsWith('+')?'badge-growth-pos':sGrowth==='—'?'':'badge-growth-neg'}">${sGrowth}</span></td>
+        <td class="num">${money(mData.purchasesTotal)}</td>
+        <td class="num">${money(mData.expensesTotal)}</td>
+        <td class="num ${mData.netProfit>=0?'profit-pos':'profit-neg'}">${money(mData.netProfit)}</td>
+        <td><span class="${pGrowth.startsWith('+')?'badge-growth-pos':pGrowth==='—'?'':'badge-growth-neg'}">${pGrowth}</span></td>
+        <td class="num">${mData.orderCount}</td>
+      </tr>`;
+    }).join('');
+
+    tableWrap.innerHTML = `<table><thead><tr>
+      <th>Month</th><th>Sales</th><th>MoM Sales %</th><th>Purchases</th><th>Expenses</th><th>Net Profit</th><th>MoM Profit %</th><th>Invoices</th>
+    </tr></thead><tbody>${matrixRows}</tbody></table>`;
+  }
+
+  function reportTotals(period,date){
+    const chosen=date||todayStr();
+    const match=d=>period==='month' ? String(d||'').slice(0,7)===chosen.slice(0,7) : String(d||'')===chosen;
+    const ss=sales.filter(s=>match(s.date));
+    const pp=purchases.filter(p=>match(p.date));
+    const ee=(expenses||[]).filter(e=>match(e.date));
+    const salesTotal=ss.reduce((a,x)=>a+(Number(x.total)||0),0);
+    const purchasesTotal=pp.reduce((a,x)=>a+(Number(x.total)||0),0);
+    const expensesTotal=ee.reduce((a,x)=>a+(Number(x.amount)||0),0);
+    const grossProfit=ss.reduce((sum,s)=>sum+(s.items||[]).reduce((x,it)=>{
+      if(it.cost==null || isNaN(Number(it.cost))) return x;
+      return x+(Number(it.price)-Number(it.cost))*Number(it.qty);
+    },0),0);
+    return {salesCount:ss.length,purchaseCount:pp.length,expenseCount:ee.length,salesTotal,purchasesTotal,expensesTotal,grossProfit,netProfit:grossProfit-expensesTotal};
+  }
+
+  function renderReport(){
+    if(!$('reportPeriod') || !$('reportDate')) return;
+    const t=reportTotals($('reportPeriod').value,$('reportDate').value||todayStr());
+    $('reportSales').textContent=money(t.salesTotal);
+    $('reportPurchases').textContent=money(t.purchasesTotal);
+    $('reportExpenses').textContent=money(t.expensesTotal);
+    $('reportGrossProfit').textContent=money(t.grossProfit);
+    $('reportNetProfit').textContent=money(t.netProfit);
+    $('reportSummary').innerHTML='Sales: '+t.salesCount+' · Purchases: '+t.purchaseCount+' · Expenses: '+t.expenseCount;
+    renderMoMMatrix();
+  }
+  if($('generateReportBtn')) $('generateReportBtn').addEventListener('click',renderReport);
+
+  /* ---------------- OTHER SECTIONS ---------------- */
+  function renderDelivery(){
+    const w=$('deliveryWrap'); if(!w)return;
+    const c=String($('deliveryFilterCourier').value||'').toLowerCase(),s=$('deliveryFilterStatus').value,d=$('deliveryFilterDate').value;
+    const a=(dailyOrders||[]).filter(o=>(!c||String(o.deliveryPartner||'').toLowerCase().includes(c))&&(!s||o.status===s)&&(!d||o.date===d));
+    w.innerHTML=a.length?`<table><thead><tr><th>Date</th><th>Customer</th><th>Company</th><th>Tracking</th><th>Order</th><th>Delivery fee</th><th>Status</th><th>ETA</th></tr></thead><tbody>${a.map(o=>`<tr><td>${escapeHtml(o.date)}</td><td>${escapeHtml(o.customerName)}</td><td>${escapeHtml(o.deliveryPartner||'—')}</td><td>${escapeHtml(o.trackingNumber||'—')}</td><td class="num">${money(o.saleTotal||0)}</td><td class="num">${money(o.deliveryFee||0)}</td><td>${escapeHtml(o.status)}</td><td>${escapeHtml(o.expectedDelivery||'—')}</td></tr>`).join('')}</tbody></table>`:'<div class="empty-state">No delivery records found.</div>';
+  }
+  ['deliveryFilterCourier','deliveryFilterStatus','deliveryFilterDate'].forEach(id=>{ if($(id)) $(id).addEventListener('change',renderDelivery); });
+
+  function renderReceivables(){
+    const total=sales.reduce((a,s)=>a+Math.max(0,Number(s.total||0)-Number(s.paidAmount||0)),0);
+    const payables=0;
+    if($('cardReceivables')) $('cardReceivables').textContent=money(total);
+    if($('cardPayables')) $('cardPayables').textContent=money(payables);
+  }
+
+  function renderDashboardAlerts(){
+    const w=$('dashboardAlertsWrap'); if(!w)return;
+    const a=[];
+    const low=inventory.filter(i=>Number(i.qty)<=Number(i.threshold));
+    if(low.length) a.push('Low stock: '+low.slice(0,8).map(i=>i.name).join(', '));
+    const late=(dailyOrders||[]).filter(o=>o.expectedDelivery&&o.expectedDelivery<todayStr()&&o.status!=='تم التسليم').length;
+    if(late) a.push('Late orders: '+late);
+    w.innerHTML=a.length?a.map(x=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)">⚠ ${escapeHtml(x)}</div>`).join(''):'<div class="empty-state">No urgent alerts.</div>';
+  }
+
+  function renderTopProducts(){
+    const wrap=$('topProductsWrap'); if(!wrap)return;
+    const map={};
+    sales.forEach(s=>(s.items||[]).forEach(it=>{
+      const k=it.itemName||'Unknown';
+      if(!map[k])map[k]={qty:0,sales:0,profit:0};
+      map[k].qty+=Number(it.qty)||0;
+      map[k].sales+=Number(it.price)*Number(it.qty)||0;
+      if(it.cost!=null) map[k].profit+=(Number(it.price)-Number(it.cost))*Number(it.qty);
+    }));
+    const arr=Object.entries(map).sort((a,b)=>b[1].qty-a[1].qty).slice(0,5);
+    wrap.innerHTML=arr.length?`<table><thead><tr><th>Product</th><th>Qty sold</th><th>Sales</th><th>Profit</th></tr></thead><tbody>${arr.map(([n,x])=>`<tr><td>${escapeHtml(n)}</td><td class="num">${x.qty}</td><td class="num">${money(x.sales)}</td><td class="num">${money(x.profit)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty-state">No sales yet.</div>';
+  }
+
+  function renderStockMovements(){
+    const wrap=$('stockMovementWrap'); if(!wrap)return;
+    const rows=(stockMovements||[]).slice().reverse().map(m=>`<tr><td>${escapeHtml(m.date)}</td><td>${escapeHtml(m.itemName)}</td><td>${escapeHtml(m.type)}</td><td class="num">${m.qty>0?'+':''}${m.qty}</td><td>${escapeHtml(m.reference||'—')}</td></tr>`).join('');
+    wrap.innerHTML=rows?`<table><thead><tr><th>Date</th><th>Product</th><th>Type</th><th>Qty change</th><th>Reference</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty-state">No stock movements found.</div>';
+  }
+
+  function renderAll(){
+    renderItemList();
+    renderCustomerDatalist();
+    renderTill();
+    renderDashboard();
+    renderSalesTable();
+    renderPurchTable();
+    renderInvTable();
+    renderBundles();
+    renderCoupons();
+    renderWriteOffTable();
+    renderCustTable();
+    renderDailyOrders();
+    renderExpensesTable();
+    renderStockMovements();
+    renderDelivery();
+    renderMoMMatrix();
+  }
+
+  /* ---------------- BACKUP & WIPE DATA ---------------- */
+  const BACKUP_DATA_KEYS=['inventory','sales','purchases','customers','expenses','suppliers','returnsLog','customerPayments','supplierPayments','stockMovements','inventoryAudits','auditLog','dailyClosures','dailyOrders','bundles','writeOffs','coupons','store-name','currency-symbol'];
+
+  function buildFullBackup(){
+    const data={app:'Store Ledger',version:3,exportedAt:new Date().toISOString(),data:{}};
+    BACKUP_DATA_KEYS.forEach(k=>{
+      const raw=localStorage.getItem(k);
+      if(raw!==null){try{data.data[k]=JSON.parse(raw);}catch(e){data.data[k]=raw;}}
+    });
+    return data;
+  }
+
+  function downloadFullBackup(){
+    const blob=new Blob([JSON.stringify(buildFullBackup(),null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download='store-ledger-backup-'+todayStr()+'.json';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  if($('downloadFullBackupBtn')) $('downloadFullBackupBtn').addEventListener('click',downloadFullBackup);
+
+  // WIPE ALL DATA LISTENER
+  if($('wipeAllDataBtn')){
+    $('wipeAllDataBtn').addEventListener('click', ()=>{
+      const confirm1 = confirm('⚠️ تحذير نهائي: هل أنت متأكد تماماً من رغبتك في حذف وتصفير جميع بيانات المتجر بالكامل؟');
+      if(!confirm1) return;
+
+      const confirm2 = confirm('هل قمت بتحميل نسخة احتياطية من بياناتك الحالية قبل المسح؟ اضغط Cancel للرجوع أو OK للمتابعة وحذف كل شيء.');
+      if(!confirm2) return;
+
+      localStorage.clear();
+      playSound('delete');
+      alert('✅ تم مسح جميع البيانات وتصفير النظام بنجاح.');
+      location.reload();
+    });
+  }
+
+  $('storeNameInput').addEventListener('change', ()=>{ storeName = $('storeNameInput').value.trim(); saveStoreName(); });
+  $('currencyInput').addEventListener('change', ()=>{ currency = $('currencyInput').value.trim() || '$'; saveCurrency(); renderAll(); });
+
+  if($('invSearch')) $('invSearch').addEventListener('input', function(){ invSearchTerm=this.value||''; renderInvTable(); });
+  if($('salesSearch')) $('salesSearch').addEventListener('input', function(){ salesSearchTerm=this.value||''; renderSalesTable(); });
+  if($('customersSearch')) $('customersSearch').addEventListener('input', function(){ customersSearchTerm=this.value||''; renderCustTable(); });
+
+  (function init(){
+    loadAll();
+    $('storeNameInput').value = storeName || '';
+    $('currencyInput').value = currency || '$';
+    $('loadingScreen').style.display = 'none';
+    $('app').style.display = 'flex';
+    renderCart();
+    renderBundleBuilder();
+    renderAll();
+  })();
+
+})();
+</script>
+</body>
+</html>
